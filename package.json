@@ -6,6 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "test:academic-recommendations": "node scripts/test-academic-recommendations.mjs",
+    "test:book-deletion": "node scripts/test-book-deletion.mjs",
+    "test:dialogue-summary-notes": "node scripts/test-dialogue-summary-notes.mjs",
+    "test:personal-notes": "node scripts/test-personal-notes.mjs",
+    "test:memory-management": "node scripts/test-memory-management.mjs",
+    "test:reading-slump": "node scripts/test-reading-slump.mjs",
+    "test:woolf-voice": "node scripts/test-woolf-voice-guardrails.mjs",
     "lint": "next lint"
   },
   "dependencies": {
@@ -15,12 +22,14 @@
     "next": "14.2.33",
     "openai": "^6.38.0",
     "react": "18.3.1",
-    "react-dom": "18.3.1"
+    "react-dom": "18.3.1",
+    "ws": "^8.21.0"
   },
   "devDependencies": {
     "@types/node": "20.14.10",
     "@types/react": "18.3.3",
     "@types/react-dom": "18.3.0",
+    "@types/ws": "^8.18.1",
     "typescript": "5.5.4"
   }
 }
