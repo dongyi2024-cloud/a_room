@@ -7,6 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { AcademicRecommendationList } from "@/components/academic-recommendations/academic-recommendation-list";
 import { SaveNoteButton } from "@/components/notes/save-note-button";
 import { ReflectionFeedPanel } from "@/components/reflections/reflection-feed-panel";
+import { RescuePackReminder } from "@/components/reader/rescue-pack-reminder";
 import { buildChapterEndFallbackQuestionForReader } from "@/lib/ai/chapter-end-fallback";
 import { getCurrentReaderUserId, getReadingProgress, saveReadingProgress } from "@/lib/reader/progress-store";
 import type {
@@ -346,9 +347,11 @@ export function ReaderShell({
   const [chapterEndError, setChapterEndError] = useState("");
   const [isChapterEndSubmitting, setIsChapterEndSubmitting] = useState(false);
   const [showAiEntryHint, setShowAiEntryHint] = useState(openAiHint);
+  const [isRescuePackOpen, setIsRescuePackOpen] = useState(false);
 
   const userIdRef = useRef<string | null>(null);
   const readerBodyRef = useRef<HTMLDivElement | null>(null);
+  const rescuePackRef = useRef<HTMLElement | null>(null);
   const paragraphRefs = useRef<Map<number, HTMLElement>>(new Map());
   const restoreTargetRef = useRef<RestoreTarget | null>(null);
   const saveTimerRef = useRef<number | null>(null);
@@ -1038,6 +1041,19 @@ export function ReaderShell({
     setChapterEndError("");
   }
 
+  function openRescuePack() {
+    setIsRescuePackOpen(true);
+
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.history.replaceState(null, "", `${pathname}?chapter=${activeChapter.orderIndex}&rescue=1#rescue-pack`);
+    window.requestAnimationFrame(() => {
+      rescuePackRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
   async function submitAiQuestion() {
     const question = aiQuestion.trim();
 
@@ -1529,6 +1545,21 @@ export function ReaderShell({
   }, [aiExplanationMode]);
 
   useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const url = new URL(window.location.href);
+
+    if (url.searchParams.get("rescue") === "1" || url.hash === "#rescue-pack") {
+      setIsRescuePackOpen(true);
+      window.requestAnimationFrame(() => {
+        rescuePackRef.current?.scrollIntoView({ behavior: "auto", block: "start" });
+      });
+    }
+  }, []);
+
+  useEffect(() => {
     if (typeof document === "undefined") {
       return;
     }
@@ -1985,6 +2016,13 @@ export function ReaderShell({
             </div>
           </div>
 
+          <RescuePackReminder
+            bookId={book.id}
+            bookTitle={book.title}
+            chapterOrder={activeChapter.orderIndex}
+            onOpenRescuePack={openRescuePack}
+          />
+
           <div className="reader-body" ref={readerBodyRef}>
             {activeChapter.paragraphs.map((paragraph) => {
               const paragraphExplanation =
@@ -2083,6 +2121,28 @@ export function ReaderShell({
               );
             })}
           </div>
+
+          {hasReadableChapter ? (
+            <section
+              className={`reader-rescue-pack${isRescuePackOpen ? " is-open" : ""}`}
+              id="rescue-pack"
+              ref={rescuePackRef}
+              aria-label="阅读救急包"
+            >
+              <div>
+                <p className="page-eyebrow">Rescue pack</p>
+                <h4 className="reader-rescue-pack-title">3 分钟救急包</h4>
+              </div>
+              <p className="reader-rescue-pack-copy">
+                救急包内容将在 F37 接入。现在你可以先把注意力放回本章：看一眼章节标题，回到当前段落，再问自己这一段正在推进哪个问题。
+              </p>
+              <div className="reader-rescue-pack-actions">
+                <button className="secondary-link button-reset" onClick={() => setIsRescuePackOpen(false)} type="button">
+                  收起
+                </button>
+              </div>
+            </section>
+          ) : null}
 
           {hasReadableChapter ? (
             <section className="reader-chapter-end">

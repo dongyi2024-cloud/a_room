@@ -746,6 +746,63 @@ select {
   padding: 18px 0 8px;
 }
 
+.rescue-pack-reminder {
+  display: grid;
+  gap: 14px;
+  margin: 14px 0 10px;
+  border: 1px solid rgba(111, 67, 34, 0.14);
+  border-radius: 8px;
+  padding: 16px;
+  background: rgba(252, 247, 238, 0.92);
+}
+
+.rescue-pack-reminder-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.rescue-pack-reminder-copy h3,
+.rescue-pack-reminder-copy p,
+.rescue-pack-reminder-meta,
+.rescue-pack-reminder-status {
+  margin: 0;
+}
+
+.rescue-pack-reminder-copy h3 {
+  color: rgba(47, 36, 25, 0.96);
+  font-size: 1.08rem;
+  line-height: 1.35;
+}
+
+.rescue-pack-reminder-copy p:not(.page-eyebrow),
+.rescue-pack-reminder-status {
+  color: rgba(88, 71, 55, 0.9);
+  line-height: 1.68;
+}
+
+.rescue-pack-reminder-meta {
+  font-size: 0.86rem;
+}
+
+.rescue-pack-reminder-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.rescue-pack-reminder-muted {
+  color: rgba(122, 106, 89, 0.86);
+  font-size: 0.86rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.rescue-pack-reminder-muted:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
 .reader-ai-entry {
   position: fixed;
   z-index: 20;
@@ -1319,6 +1376,40 @@ select {
   margin-top: 32px;
   padding-top: 24px;
   border-top: 1px solid var(--line);
+}
+
+.reader-rescue-pack {
+  display: none;
+  gap: 12px;
+  margin-top: 32px;
+  border-top: 1px solid rgba(111, 67, 34, 0.12);
+  padding: 24px 0 4px;
+}
+
+.reader-rescue-pack.is-open {
+  display: grid;
+}
+
+.reader-rescue-pack-title,
+.reader-rescue-pack-copy {
+  margin: 0;
+}
+
+.reader-rescue-pack-title {
+  font-size: clamp(1.1rem, 2vw, 1.35rem);
+  line-height: 1.3;
+}
+
+.reader-rescue-pack-copy {
+  max-width: 62ch;
+  color: rgba(88, 71, 55, 0.86);
+  line-height: 1.72;
+}
+
+.reader-rescue-pack-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .reader-chapter-end {
@@ -2159,8 +2250,14 @@ select {
   }
 
   .reader-ai-entry .primary-link,
-  .reader-ai-entry .secondary-link {
+  .reader-ai-entry .secondary-link,
+  .rescue-pack-reminder-actions .primary-link,
+  .rescue-pack-reminder-actions .secondary-link {
     width: 100%;
+  }
+
+  .rescue-pack-reminder {
+    padding: 14px;
   }
 
   .reader-ai-panel {
