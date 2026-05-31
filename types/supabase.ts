@@ -686,6 +686,33 @@ export type Database = {
         };
         Relationships: [];
       };
+      user_app_settings: {
+        Row: {
+          created_at: string;
+          id: string;
+          reading_slump_detection_enabled: boolean;
+          theme_mode: "light" | "dark";
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          reading_slump_detection_enabled?: boolean;
+          theme_mode?: "light" | "dark";
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          reading_slump_detection_enabled?: boolean;
+          theme_mode?: "light" | "dark";
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       user_memories: {
         Row: {
           content: string;

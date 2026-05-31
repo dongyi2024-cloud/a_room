@@ -296,6 +296,16 @@ create table if not exists public.user_memory_settings (
   unique (user_id)
 );
 
+create table if not exists public.user_app_settings (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  theme_mode text not null default 'light' check (theme_mode in ('light', 'dark')),
+  reading_slump_detection_enabled boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (user_id)
+);
+
 create table if not exists public.user_memories (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade,
@@ -439,6 +449,9 @@ on public.reading_slump_states (status, evaluated_at desc);
 create index if not exists idx_user_memory_settings_user_id
 on public.user_memory_settings (user_id);
 
+create index if not exists idx_user_app_settings_user_id
+on public.user_app_settings (user_id);
+
 create index if not exists idx_personal_notes_user_created
 on public.personal_notes (user_id, created_at desc);
 
@@ -482,6 +495,7 @@ alter table public.reflection_card_likes enable row level security;
 alter table public.feedback_reports enable row level security;
 alter table public.personal_notes enable row level security;
 alter table public.user_memory_settings enable row level security;
+alter table public.user_app_settings enable row level security;
 alter table public.user_memories enable row level security;
 alter table public.reading_behavior_events enable row level security;
 alter table public.reading_slump_rule_configs enable row level security;
@@ -653,6 +667,14 @@ with check (auth.uid() = user_id);
 drop policy if exists "user memory settings owner read write" on public.user_memory_settings;
 create policy "user memory settings owner read write"
 on public.user_memory_settings
+for all
+to authenticated
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
+drop policy if exists "user app settings owner read write" on public.user_app_settings;
+create policy "user app settings owner read write"
+on public.user_app_settings
 for all
 to authenticated
 using (auth.uid() = user_id)

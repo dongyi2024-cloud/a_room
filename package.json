@@ -13,6 +13,7 @@
     "test:feedback-reporting": "node scripts/test-feedback-reporting.mjs",
     "test:personal-notes": "node scripts/test-personal-notes.mjs",
     "test:memory-management": "node scripts/test-memory-management.mjs",
+    "test:reading-preferences": "node scripts/test-reading-preferences.mjs",
     "test:reading-slump": "node scripts/test-reading-slump.mjs",
     "test:rescue-pack-reminders": "node scripts/test-rescue-pack-reminders.mjs",
     "test:woolf-voice": "node scripts/test-woolf-voice-guardrails.mjs",
