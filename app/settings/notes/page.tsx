@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CommunityShareNoteAction } from "@/components/notes/community-share-note-action";
 import { listPersonalNotes, PersonalNoteSchemaError } from "@/lib/notes/data";
 import { requireUser } from "@/lib/supabase/auth";
 import type { PersonalNote, PersonalNoteSourceType } from "@/types/personal-notes";
@@ -295,6 +296,19 @@ export default async function PersonalNotesPage({ searchParams }: PersonalNotesP
                       <span className="note-source-unavailable">原始对话暂不可恢复</span>
                     ) : null}
                   </div>
+                  <CommunityShareNoteAction
+                    note={{
+                      id: note.id,
+                      sourceType: note.sourceType,
+                      sourceText: note.sourceText,
+                      aiContent: note.aiContent,
+                      noteContent: note.noteContent,
+                      bookTitle: note.bookTitle,
+                      chapterTitle: note.chapterTitle,
+                      paragraphOrder: note.paragraphOrder,
+                      paragraphExcerpt: note.paragraphExcerpt
+                    }}
+                  />
                 </article>
               );
             })}

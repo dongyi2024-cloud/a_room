@@ -1,6 +1,8 @@
 import "server-only";
 
+import { buildCommunityShareDraftContent, isCommunityShareSourceType } from "@/lib/notes/community-share";
 import { getSupabaseServiceRoleClient } from "@/lib/supabase/service-role";
+import type { CommunityShareDraft } from "@/types/community-share";
 import type { PersonalNote, PersonalNoteSourceType } from "@/types/personal-notes";
 import type { Database, Json } from "@/types/supabase";
 
@@ -327,4 +329,72 @@ export async function listPersonalNotes(userId: string): Promise<PersonalNote[]>
       paragraphExcerpt: paragraph.excerpt
     });
   });
+}
+
+export async function getOwnedPersonalNote(input: { userId: string; noteId: string }): Promise<PersonalNote> {
+  const supabase = getSupabaseServiceRoleClient();
+  const { data, error } = await supabase
+    .from("personal_notes")
+    .select(
+      "id, user_id, book_id, chapter_id, paragraph_id, source_type, source_text, ai_content, note_content, paragraph_excerpt, metadata, created_at, updated_at"
+    )
+    .eq("id", input.noteId)
+    .maybeSingle();
+
+  if (error) {
+    if (isMissingPersonalNoteSchemaError(error)) {
+      throw new PersonalNoteSchemaError("Personal note schema is not ready.");
+    }
+
+    throw error;
+  }
+
+  if (!data || data.user_id !== input.userId) {
+    throw new PersonalNoteAccessError("这条笔记暂时不可用，或不属于当前账号。");
+  }
+
+  const context = await getOwnedNoteContext({
+    userId: input.userId,
+    bookId: data.book_id,
+    chapterId: data.chapter_id,
+    paragraphId: data.paragraph_id
+  });
+
+  return toPersonalNote(data as PersonalNoteRow, context);
+}
+
+export async function buildCommunityShareDraft(input: {
+  userId: string;
+  noteId: string;
+}): Promise<CommunityShareDraft> {
+  const note = await getOwnedPersonalNote(input);
+
+  if (!isCommunityShareSourceType(note.sourceType)) {
+    throw new PersonalNoteValidationError("这类笔记暂时不能分享到社区。");
+  }
+
+  if (note.chapterOrder <= 0 || note.paragraphOrder <= 0) {
+    throw new PersonalNoteValidationError("这条笔记缺少可分享的原文位置。");
+  }
+
+  const content = buildCommunityShareDraftContent(note);
+
+  if (!content) {
+    throw new PersonalNoteValidationError("这条笔记没有可分享的内容。");
+  }
+
+  return {
+    noteId: note.id,
+    content,
+    context: {
+      bookId: note.bookId,
+      bookTitle: note.bookTitle,
+      chapterId: note.chapterId,
+      chapterOrder: note.chapterOrder,
+      chapterTitle: note.chapterTitle,
+      paragraphId: note.paragraphId,
+      paragraphOrder: note.paragraphOrder,
+      paragraphExcerpt: note.paragraphExcerpt
+    }
+  };
 }

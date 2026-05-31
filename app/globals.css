@@ -635,6 +635,69 @@ select {
   flex-wrap: wrap;
 }
 
+.note-community-share {
+  display: grid;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.note-share-entry {
+  width: fit-content;
+}
+
+.note-share-editor {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(111, 67, 34, 0.14);
+  border-radius: 16px;
+  background: rgba(250, 244, 235, 0.58);
+}
+
+.note-share-context {
+  display: grid;
+  gap: 4px;
+}
+
+.note-share-context p,
+.note-share-privacy,
+.note-share-error,
+.note-share-success p {
+  margin: 0;
+}
+
+.note-share-context p:not(.page-eyebrow),
+.note-share-privacy {
+  color: rgba(88, 71, 55, 0.88);
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.note-share-textarea {
+  min-height: 130px;
+  resize: vertical;
+}
+
+.note-share-actions,
+.note-share-success {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.note-share-error {
+  color: #9b3329;
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.note-share-success {
+  color: rgba(47, 94, 67, 0.95);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
 .reader-frame {
   padding: 24px;
 }
