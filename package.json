@@ -10,6 +10,7 @@
     "test:book-deletion": "node scripts/test-book-deletion.mjs",
     "test:community-share-from-notes": "node scripts/test-community-share-from-notes.mjs",
     "test:dialogue-summary-notes": "node scripts/test-dialogue-summary-notes.mjs",
+    "test:feedback-reporting": "node scripts/test-feedback-reporting.mjs",
     "test:personal-notes": "node scripts/test-personal-notes.mjs",
     "test:memory-management": "node scripts/test-memory-management.mjs",
     "test:reading-slump": "node scripts/test-reading-slump.mjs",

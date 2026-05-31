@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AcademicRecommendationList } from "@/components/academic-recommendations/academic-recommendation-list";
+import { FeedbackReportAction } from "@/components/feedback/feedback-report-action";
 import { SaveNoteButton } from "@/components/notes/save-note-button";
 import { ReflectionFeedPanel } from "@/components/reflections/reflection-feed-panel";
 import { RescuePackReminder } from "@/components/reader/rescue-pack-reminder";
@@ -1694,6 +1695,27 @@ export function ReaderShell({
                                   chapterOrder: selectionContext.chapterOrder,
                                   paragraphOrder: selectionContext.paragraphOrder
                                 }
+                              }}
+                            />
+                            <FeedbackReportAction
+                              mode="feedback"
+                              targetId={`${getSelectionThreadKey(selectionContext)}:${index}`}
+                              targetLabel="这条 AI 回答"
+                              targetType="ai_answer"
+                              metadata={{
+                                surface: "selection_ai_panel",
+                                bookId: book.id,
+                                chapterId: selectionContext.chapterId,
+                                chapterOrder: selectionContext.chapterOrder,
+                                paragraphId: selectionContext.paragraphId,
+                                paragraphOrder: selectionContext.paragraphOrder,
+                                question: turn.question.slice(0, 500),
+                                answerExcerpt: turn.answer.slice(0, 800),
+                                selectedTextExcerpt: selectionContext.selectedText.slice(0, 500),
+                                citationCount: turn.citations?.length ?? 0,
+                                academicRecommendationCount: turn.academicRecommendations?.length ?? 0,
+                                academicSourceLeadCount: turn.academicSourceLeads?.length ?? 0,
+                                insufficientEvidence: turn.insufficientEvidence ?? false
                               }}
                             />
                           </div>

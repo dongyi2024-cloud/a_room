@@ -228,6 +228,8 @@ create table if not exists public.reflection_cards (
   content text not null,
   paragraph_excerpt text not null,
   display_name_snapshot text,
+  moderation_status text not null default 'visible' check (moderation_status in ('visible', 'pending_review', 'hidden')),
+  report_count integer not null default 0 check (report_count >= 0),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -238,6 +240,32 @@ create table if not exists public.reflection_card_likes (
   card_id uuid not null references public.reflection_cards (id) on delete cascade,
   created_at timestamptz not null default now(),
   unique (user_id, card_id)
+);
+
+create table if not exists public.feedback_reports (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  target_type text not null check (target_type in ('ai_answer', 'reflection_card', 'user_content', 'system_issue')),
+  target_id text,
+  feedback_type text not null check (
+    feedback_type in (
+      'ai_answer_wrong',
+      'citation_inaccurate',
+      'inappropriate_content',
+      'offensive_or_uncomfortable',
+      'bug',
+      'other'
+    )
+  ),
+  content text,
+  status text not null default 'open' check (status in ('open', 'in_review', 'resolved', 'dismissed')),
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  check (
+    target_type <> 'reflection_card'
+    or nullif(trim(coalesce(target_id, '')), '') is not null
+  )
 );
 
 create table if not exists public.personal_notes (
@@ -417,6 +445,18 @@ on public.personal_notes (user_id, created_at desc);
 create index if not exists idx_personal_notes_context
 on public.personal_notes (user_id, book_id, chapter_id, paragraph_id, created_at desc);
 
+create index if not exists idx_reflection_cards_moderation
+on public.reflection_cards (moderation_status, report_count desc, created_at desc);
+
+create index if not exists idx_feedback_reports_user_created
+on public.feedback_reports (user_id, created_at desc);
+
+create index if not exists idx_feedback_reports_target
+on public.feedback_reports (target_type, target_id, created_at desc);
+
+create index if not exists idx_feedback_reports_status
+on public.feedback_reports (status, created_at desc);
+
 create index if not exists idx_user_memories_user_active
 on public.user_memories (user_id, status, is_enabled, updated_at desc);
 
@@ -439,6 +479,7 @@ alter table public.smart_mark_jobs enable row level security;
 alter table public.book_chunks enable row level security;
 alter table public.reflection_cards enable row level security;
 alter table public.reflection_card_likes enable row level security;
+alter table public.feedback_reports enable row level security;
 alter table public.personal_notes enable row level security;
 alter table public.user_memory_settings enable row level security;
 alter table public.user_memories enable row level security;
@@ -555,7 +596,7 @@ create policy "reflection cards authenticated read"
 on public.reflection_cards
 for select
 to authenticated
-using (true);
+using (moderation_status <> 'hidden');
 
 drop policy if exists "reflection cards owner write" on public.reflection_cards;
 create policy "reflection cards owner write"
@@ -578,6 +619,20 @@ on public.reflection_card_likes
 for all
 to authenticated
 using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
+drop policy if exists "feedback reports owner read" on public.feedback_reports;
+create policy "feedback reports owner read"
+on public.feedback_reports
+for select
+to authenticated
+using (auth.uid() = user_id);
+
+drop policy if exists "feedback reports owner insert" on public.feedback_reports;
+create policy "feedback reports owner insert"
+on public.feedback_reports
+for insert
+to authenticated
 with check (auth.uid() = user_id);
 
 drop policy if exists "personal notes owner read" on public.personal_notes;

@@ -328,8 +328,10 @@ export type Database = {
           created_at: string;
           display_name_snapshot: string | null;
           id: string;
+          moderation_status: string;
           paragraph_excerpt: string;
           paragraph_id: string;
+          report_count: number;
           updated_at: string;
           user_id: string;
         };
@@ -340,8 +342,10 @@ export type Database = {
           created_at?: string;
           display_name_snapshot?: string | null;
           id?: string;
+          moderation_status?: string;
           paragraph_excerpt: string;
           paragraph_id: string;
+          report_count?: number;
           updated_at?: string;
           user_id: string;
         };
@@ -352,8 +356,10 @@ export type Database = {
           created_at?: string;
           display_name_snapshot?: string | null;
           id?: string;
+          moderation_status?: string;
           paragraph_excerpt?: string;
           paragraph_id?: string;
+          report_count?: number;
           updated_at?: string;
           user_id?: string;
         };
@@ -376,6 +382,45 @@ export type Database = {
           card_id?: string;
           created_at?: string;
           id?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      feedback_reports: {
+        Row: {
+          content: string | null;
+          created_at: string;
+          feedback_type: string;
+          id: string;
+          metadata: Json;
+          status: string;
+          target_id: string | null;
+          target_type: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          content?: string | null;
+          created_at?: string;
+          feedback_type: string;
+          id?: string;
+          metadata?: Json;
+          status?: string;
+          target_id?: string | null;
+          target_type: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          content?: string | null;
+          created_at?: string;
+          feedback_type?: string;
+          id?: string;
+          metadata?: Json;
+          status?: string;
+          target_id?: string | null;
+          target_type?: string;
+          updated_at?: string;
           user_id?: string;
         };
         Relationships: [];
