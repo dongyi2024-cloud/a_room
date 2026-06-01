@@ -533,6 +533,51 @@ export type Database = {
         };
         Relationships: [];
       };
+      author_status_cards: {
+        Row: {
+          book_id: string | null;
+          card_date: string;
+          chapter_id: string | null;
+          cta_hint: string;
+          generated_at: string;
+          id: string;
+          source_summary: string | null;
+          thought_body: string;
+          thought_title: string;
+          time_period: "清晨" | "上午" | "中午" | "下午" | "夜晚" | "深夜";
+          user_id: string;
+          woolf_status: string;
+        };
+        Insert: {
+          book_id?: string | null;
+          card_date: string;
+          chapter_id?: string | null;
+          cta_hint: string;
+          generated_at?: string;
+          id?: string;
+          source_summary?: string | null;
+          thought_body: string;
+          thought_title: string;
+          time_period: "清晨" | "上午" | "中午" | "下午" | "夜晚" | "深夜";
+          user_id: string;
+          woolf_status: string;
+        };
+        Update: {
+          book_id?: string | null;
+          card_date?: string;
+          chapter_id?: string | null;
+          cta_hint?: string;
+          generated_at?: string;
+          id?: string;
+          source_summary?: string | null;
+          thought_body?: string;
+          thought_title?: string;
+          time_period?: "清晨" | "上午" | "中午" | "下午" | "夜晚" | "深夜";
+          user_id?: string;
+          woolf_status?: string;
+        };
+        Relationships: [];
+      };
       reading_slump_rule_configs: {
         Row: {
           created_at: string;

@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "test:academic-recommendations": "node scripts/test-academic-recommendations.mjs",
+    "test:author-status-card": "node scripts/test-author-status-card.mjs",
     "test:book-deletion": "node scripts/test-book-deletion.mjs",
     "test:community-share-from-notes": "node scripts/test-community-share-from-notes.mjs",
     "test:dialogue-summary-notes": "node scripts/test-dialogue-summary-notes.mjs",

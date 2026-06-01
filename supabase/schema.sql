@@ -354,6 +354,22 @@ create table if not exists public.reading_behavior_events (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.author_status_cards (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  book_id uuid references public.books (id) on delete set null,
+  chapter_id uuid references public.chapters (id) on delete set null,
+  card_date date not null,
+  time_period text not null check (time_period in ('清晨', '上午', '中午', '下午', '夜晚', '深夜')),
+  woolf_status text not null,
+  thought_title text not null,
+  thought_body text not null,
+  cta_hint text not null,
+  source_summary text,
+  generated_at timestamptz not null default now(),
+  unique (user_id, card_date, time_period)
+);
+
 create table if not exists public.reading_slump_rule_configs (
   id uuid primary key default gen_random_uuid(),
   version integer not null unique,
@@ -437,6 +453,12 @@ on public.reading_behavior_events (user_id, book_id, event_type, occurred_at des
 create index if not exists idx_reading_behavior_events_position
 on public.reading_behavior_events (book_id, chapter_order, paragraph_order);
 
+create index if not exists idx_author_status_cards_user_period
+on public.author_status_cards (user_id, card_date desc, time_period);
+
+create index if not exists idx_author_status_cards_context
+on public.author_status_cards (book_id, chapter_id, generated_at desc);
+
 create index if not exists idx_reading_slump_rule_configs_active
 on public.reading_slump_rule_configs (is_active, version desc);
 
@@ -498,6 +520,7 @@ alter table public.user_memory_settings enable row level security;
 alter table public.user_app_settings enable row level security;
 alter table public.user_memories enable row level security;
 alter table public.reading_behavior_events enable row level security;
+alter table public.author_status_cards enable row level security;
 alter table public.reading_slump_rule_configs enable row level security;
 alter table public.reading_slump_states enable row level security;
 alter table public.academic_recommendation_cache enable row level security;
@@ -691,6 +714,14 @@ with check (auth.uid() = user_id);
 drop policy if exists "reading behavior events owner read write" on public.reading_behavior_events;
 create policy "reading behavior events owner read write"
 on public.reading_behavior_events
+for all
+to authenticated
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
+drop policy if exists "author status cards owner read write" on public.author_status_cards;
+create policy "author status cards owner read write"
+on public.author_status_cards
 for all
 to authenticated
 using (auth.uid() = user_id)
