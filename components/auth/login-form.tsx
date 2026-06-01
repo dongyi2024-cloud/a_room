@@ -16,6 +16,33 @@ function normalizeAuthError(error: unknown) {
   const normalized = message.toLowerCase();
 
   if (
+    normalized.includes("signups not allowed") ||
+    normalized.includes("signup disabled") ||
+    normalized.includes("signups are disabled") ||
+    normalized.includes("registration disabled")
+  ) {
+    return "当前项目未开启邮箱注册，请在 Supabase Auth 设置中允许用户注册。";
+  }
+
+  if (
+    normalized.includes("email logins are disabled") ||
+    normalized.includes("email signup is disabled") ||
+    normalized.includes("email signups are disabled") ||
+    normalized.includes("provider is not enabled")
+  ) {
+    return "当前 Supabase 项目未开启 Email 登录/注册，请在 Authentication → Providers → Email 中启用 Email Provider。";
+  }
+
+  if (
+    normalized.includes("user already registered") ||
+    normalized.includes("already registered") ||
+    normalized.includes("already exists") ||
+    normalized.includes("user exists")
+  ) {
+    return "该邮箱已注册，请直接登录。";
+  }
+
+  if (
     normalized.includes("invalid login credentials") ||
     normalized.includes("invalid credentials") ||
     normalized.includes("email or password")
@@ -97,6 +124,7 @@ export function LoginForm({ nextPath }: LoginFormProps) {
 
       navigateTo(nextPath);
     } catch (error) {
+      console.warn("Supabase auth error", error);
       setErrorMessage(normalizeAuthError(error));
     } finally {
       setIsSubmitting(false);
@@ -129,6 +157,7 @@ export function LoginForm({ nextPath }: LoginFormProps) {
 
       setStatusMessage("密码重置邮件已尝试发送。开发阶段如果触发邮件频率限制，请稍后再试。");
     } catch (error) {
+      console.warn("Supabase password reset error", error);
       setErrorMessage(normalizeAuthError(error));
     } finally {
       setIsResettingPassword(false);

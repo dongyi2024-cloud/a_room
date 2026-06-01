@@ -10,7 +10,7 @@ type LoginPageProps = {
 
 function sanitizeNextPath(nextPath?: string) {
   if (!nextPath || !nextPath.startsWith("/")) {
-    return "/bookshelf";
+    return "/";
   }
 
   return nextPath;
