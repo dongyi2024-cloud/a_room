@@ -1607,7 +1607,7 @@ export function ReaderShell({
             <p className="reader-ai-entry-copy">"{selectionContext.selectedText}"</p>
             <div className="reader-ai-entry-actions">
               <button className="primary-link button-reset" onClick={openAiPanel} type="button">
-                Ask AI
+                Ask Woolf
               </button>
               {selectionContext.paragraphOrder !== null ? (
                 <button className="secondary-link button-reset" onClick={openReflectionFromSelection} type="button">
@@ -1639,7 +1639,7 @@ export function ReaderShell({
       ? createPortal(
           <aside
             className="reader-ai-panel"
-            aria-label="Ask AI about selected text"
+            aria-label="Ask Woolf about selected text"
             ref={aiPanelRef}
             style={getPanelStyle(selectionContext)}
           >
@@ -1659,8 +1659,8 @@ export function ReaderShell({
                     写感受
                   </button>
                 ) : null}
-                <button className="secondary-link button-reset" onClick={closeSelectionPanel} type="button">
-                  Close
+                <button aria-label="关闭" className="reader-ai-panel-close button-reset" onClick={closeSelectionPanel} type="button">
+                  ×
                 </button>
               </div>
             </div>
@@ -1681,23 +1681,34 @@ export function ReaderShell({
                         ) : null}
                         {turn.status !== "pending" && turn.status !== "error" ? <p>{turn.answer}</p> : null}
                         {turn.status === "done" && selectionContext.paragraphId ? (
-                          <div className="note-save-row">
-                            <SaveNoteButton
-                              payload={{
-                                bookId: book.id,
-                                chapterId: selectionContext.chapterId,
-                                paragraphId: selectionContext.paragraphId,
-                                sourceType: "ai_answer",
-                                sourceText: selectionContext.selectedText,
-                                aiContent: turn.answer,
-                                metadata: {
-                                  question: turn.question,
-                                  chapterOrder: selectionContext.chapterOrder,
-                                  paragraphOrder: selectionContext.paragraphOrder
-                                }
-                              }}
-                            />
+                          <div className="reader-ai-answer-actions">
+                            <div className="reader-ai-answer-actions-primary">
+                              <SaveNoteButton
+                                payload={{
+                                  bookId: book.id,
+                                  chapterId: selectionContext.chapterId,
+                                  paragraphId: selectionContext.paragraphId,
+                                  sourceType: "ai_answer",
+                                  sourceText: selectionContext.selectedText,
+                                  aiContent: turn.answer,
+                                  metadata: {
+                                    question: turn.question,
+                                    chapterOrder: selectionContext.chapterOrder,
+                                    paragraphOrder: selectionContext.paragraphOrder
+                                  }
+                                }}
+                              />
+                              <button
+                                className="secondary-link button-reset"
+                                disabled={!canSummarizeDialogue}
+                                onClick={generateDialogueSummary}
+                                type="button"
+                              >
+                                {dialogueSummary.status === "generating" ? "生成中..." : "生成摘要"}
+                              </button>
+                            </div>
                             <FeedbackReportAction
+                              className="reader-ai-feedback"
                               mode="feedback"
                               targetId={`${getSelectionThreadKey(selectionContext)}:${index}`}
                               targetLabel="这条 AI 回答"
@@ -1802,26 +1813,10 @@ export function ReaderShell({
                 </div>
               ) : null}
               {aiError ? <p className="reader-ai-error">{aiError}</p> : null}
-              {completedSummaryTurns.length > 0 && selectionContext.paragraphId ? (
+              {completedSummaryTurns.length > 0 &&
+              selectionContext.paragraphId &&
+              dialogueSummary.status !== "idle" ? (
                 <section className="dialogue-summary-panel" aria-label="对话摘要">
-                  <div className="dialogue-summary-header">
-                    <div>
-                      <p className="page-eyebrow">Dialogue summary</p>
-                      <h3>对话摘要</h3>
-                    </div>
-                    {dialogueSummary.status === "idle" ||
-                    dialogueSummary.status === "error" ||
-                    dialogueSummary.status === "saved" ? (
-                      <button
-                        className="secondary-link button-reset"
-                        disabled={!canSummarizeDialogue}
-                        onClick={generateDialogueSummary}
-                        type="button"
-                      >
-                        {dialogueSummary.status === "saved" ? "重新生成" : "生成摘要"}
-                      </button>
-                    ) : null}
-                  </div>
                   {dialogueSummary.status === "generating" ? <p className="dialogue-summary-note">正在生成摘要...</p> : null}
                   {dialogueSummary.status === "saved" ? <p className="dialogue-summary-success">摘要已保存到个人笔记。</p> : null}
                   {dialogueSummary.error ? <p className="reader-ai-error">{dialogueSummary.error}</p> : null}
@@ -1967,10 +1962,10 @@ export function ReaderShell({
               </div>
               <div className="reader-ai-panel-header-actions">
                 <button className="reader-ai-panel-toggle button-reset" onClick={reopenAiPanelFromReflection} type="button">
-                  Ask AI
+                  Ask Woolf
                 </button>
-                <button className="secondary-link button-reset" onClick={closeSelectionPanel} type="button">
-                  Close
+                <button aria-label="关闭" className="reader-ai-panel-close button-reset" onClick={closeSelectionPanel} type="button">
+                  ×
                 </button>
               </div>
             </div>
@@ -1998,7 +1993,7 @@ export function ReaderShell({
           </p>
           {showAiEntryHint ? (
             <div className="reader-ai-deeplink-note" role="status">
-              <p>Ask AI 已准备好。请先在正文中选中一段文字，再点击浮层里的 Ask AI 提问。</p>
+              <p>Ask Woolf 已准备好。请先在正文中选中一段文字，再点击浮层里的 Ask Woolf 提问。</p>
               <button className="button-reset" onClick={() => setShowAiEntryHint(false)} type="button">
                 Hide
               </button>

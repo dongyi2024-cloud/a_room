@@ -31,11 +31,8 @@ export default async function ReadingPreferencesPage() {
           <Link className="secondary-link" href="/bookshelf">
             返回书架
           </Link>
-          <Link className="secondary-link" href="/settings/memory">
-            长期记忆
-          </Link>
-          <Link className="secondary-link" href="/settings/notes">
-            我的笔记
+          <Link className="secondary-link" href="/">
+            返回首页
           </Link>
         </div>
       </header>
@@ -47,6 +44,9 @@ export default async function ReadingPreferencesPage() {
           <div className="state-actions">
             <Link className="secondary-link" href="/bookshelf">
               返回书架
+            </Link>
+            <Link className="secondary-link" href="/">
+              返回首页
             </Link>
           </div>
         </section>

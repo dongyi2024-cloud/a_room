@@ -177,8 +177,8 @@ export default async function PersonalNotesPage({ searchParams }: PersonalNotesP
           </p>
         </div>
         <div className="header-actions">
-          <Link className="secondary-link" href="/bookshelf">
-            返回书架
+          <Link className="secondary-link" href="/">
+            返回首页
           </Link>
         </div>
       </header>

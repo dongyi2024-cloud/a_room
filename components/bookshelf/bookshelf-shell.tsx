@@ -1,14 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AuthorStatusCard } from "@/components/books/author-status-card";
-import { getAuthorStatusCardContent } from "@/lib/books/author-status-card";
 import { isSupportedEpubFile } from "@/lib/bookshelf/helpers";
-import { getMostRecentProgressBookId } from "@/lib/reader/progress-store";
 import type { BookshelfItem } from "@/types/bookshelf";
-import { SignOutButton } from "@/components/auth/sign-out-button";
 import { BookshelfGrid } from "@/components/reader/bookshelf-grid";
 
 type BookshelfShellProps = {
@@ -22,17 +18,6 @@ export function BookshelfShell({ items, userEmail }: BookshelfShellProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const readyBooks = items.filter((item) => item.importStatus === "ready");
-  const fallbackFeaturedBook = readyBooks[0] ?? null;
-  const readyBookIds = readyBooks.map((book) => book.id);
-  const readyBookSignature = readyBookIds.join("|");
-  const [featuredBookId, setFeaturedBookId] = useState<string | null>(fallbackFeaturedBook?.id ?? null);
-  const featuredBook = readyBooks.find((book) => book.id === featuredBookId) ?? fallbackFeaturedBook;
-
-  useEffect(() => {
-    const recentBookId = getMostRecentProgressBookId(readyBookIds);
-    setFeaturedBookId(recentBookId ?? fallbackFeaturedBook?.id ?? null);
-  }, [fallbackFeaturedBook?.id, readyBookSignature]);
 
   function openPicker() {
     inputRef.current?.click();
@@ -133,28 +118,16 @@ export function BookshelfShell({ items, userEmail }: BookshelfShellProps) {
         </div>
 
         <div className="header-actions">
-          <Link className="secondary-link" href="/community">
-            <span className="action-copy">
-              <span className="action-copy-zh">社区</span>
-              <span className="action-copy-en">Community</span>
-            </span>
-          </Link>
-          <Link className="secondary-link" href="/settings/memory">
-            <span className="action-copy">
-              <span className="action-copy-zh">记忆</span>
-              <span className="action-copy-en">Memory</span>
-            </span>
-          </Link>
           <Link className="secondary-link" href="/settings/preferences">
             <span className="action-copy">
               <span className="action-copy-zh">阅读设置</span>
               <span className="action-copy-en">Preferences</span>
             </span>
           </Link>
-          <Link className="secondary-link" href="/settings/notes">
+          <Link className="secondary-link" href="/">
             <span className="action-copy">
-              <span className="action-copy-zh">笔记</span>
-              <span className="action-copy-en">Notes</span>
+              <span className="action-copy-zh">返回首页</span>
+              <span className="action-copy-en">Home</span>
             </span>
           </Link>
           <button className="primary-link button-reset" disabled={isUploading} onClick={openPicker} type="button">
@@ -163,7 +136,6 @@ export function BookshelfShell({ items, userEmail }: BookshelfShellProps) {
               <span className="action-copy-en">{isUploading ? "Uploading..." : "Upload EPUB"}</span>
             </span>
           </button>
-          <SignOutButton />
         </div>
       </header>
 
@@ -177,11 +149,6 @@ export function BookshelfShell({ items, userEmail }: BookshelfShellProps) {
 
       {errorMessage ? <p className="form-error page-feedback">{errorMessage}</p> : null}
       {statusMessage ? <p className="form-success page-feedback">{statusMessage}</p> : null}
-      {featuredBook ? (
-        <section className="bookshelf-author-status">
-          <AuthorStatusCard bookId={featuredBook.id} content={getAuthorStatusCardContent(featuredBook)} />
-        </section>
-      ) : null}
 
       {items.length === 0 ? (
         <section className="soft-card empty-state">
@@ -190,14 +157,6 @@ export function BookshelfShell({ items, userEmail }: BookshelfShellProps) {
           </div>
           <div className="state-text bilingual-block">
             <p className="bilingual-primary">上传一本属于你的 EPUB 文件，系统会先写入私有书架，再解析章节和段落，完成后才会送进阅读器。</p>
-          </div>
-          <div className="state-actions">
-            <button className="primary-link button-reset" disabled={isUploading} onClick={openPicker} type="button">
-              <span className="action-copy">
-                <span className="action-copy-zh">上传第一本 EPUB</span>
-                <span className="action-copy-en">Upload your first EPUB</span>
-              </span>
-            </button>
           </div>
         </section>
       ) : (
