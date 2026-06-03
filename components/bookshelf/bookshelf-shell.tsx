@@ -1,10 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { isSupportedEpubFile } from "@/lib/bookshelf/helpers";
+import { useState } from "react";
 import type { BookshelfItem } from "@/types/bookshelf";
+import { BookUploadControl } from "@/components/bookshelf/book-upload-control";
 import { BookshelfGrid } from "@/components/reader/bookshelf-grid";
 
 type BookshelfShellProps = {
@@ -13,86 +12,8 @@ type BookshelfShellProps = {
 };
 
 export function BookshelfShell({ items, userEmail }: BookshelfShellProps) {
-  const router = useRouter();
-  const inputRef = useRef<HTMLInputElement>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-
-  function openPicker() {
-    inputRef.current?.click();
-  }
-
-  async function handleFileSelected(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    let createdImportRecord = false;
-
-    if (!file) {
-      return;
-    }
-
-    setErrorMessage(null);
-    setStatusMessage(null);
-
-    if (!isSupportedEpubFile(file.name, file.type)) {
-      setErrorMessage("Only EPUB files are supported in the current ingestion flow.");
-      event.target.value = "";
-      return;
-    }
-
-    setIsUploading(true);
-
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const uploadResponse = await fetch("/api/books/upload", {
-        method: "POST",
-        body: formData
-      });
-      const uploadPayload = (await uploadResponse.json()) as { bookId?: string; error?: string };
-
-      if (!uploadResponse.ok || !uploadPayload.bookId) {
-        throw new Error(uploadPayload.error || "Unable to upload the selected EPUB.");
-      }
-
-      createdImportRecord = true;
-      setStatusMessage("Upload received. Parsing, chunking, and embedding have started.");
-      const processResponse = await fetch("/api/books/process", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ bookId: uploadPayload.bookId })
-      });
-      const processPayload = (await processResponse.json()) as {
-        error?: string;
-        ragStatus?: "processing" | "ready" | "failed";
-      };
-
-      if (!processResponse.ok) {
-        throw new Error(processPayload.error || "Parsing failed.");
-      }
-
-      setStatusMessage(
-        processPayload.ragStatus === "ready"
-          ? "Book parsed successfully and added to your private shelf. AI is ready."
-          : processPayload.ragStatus === "failed"
-            ? "Book parsed successfully, but AI preparation failed. You can still open the reader."
-            : "Book parsed successfully. AI preparation is still processing."
-      );
-      router.refresh();
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Unable to upload this EPUB.");
-
-      if (createdImportRecord) {
-        router.refresh();
-      }
-    } finally {
-      setIsUploading(false);
-      event.target.value = "";
-    }
-  }
 
   return (
     <>
@@ -130,22 +51,20 @@ export function BookshelfShell({ items, userEmail }: BookshelfShellProps) {
               <span className="action-copy-en">Home</span>
             </span>
           </Link>
-          <button className="primary-link button-reset" disabled={isUploading} onClick={openPicker} type="button">
-            <span className="action-copy">
-              <span className="action-copy-zh">{isUploading ? "正在上传" : "上传 EPUB"}</span>
-              <span className="action-copy-en">{isUploading ? "Uploading..." : "Upload EPUB"}</span>
-            </span>
-          </button>
+          <BookUploadControl
+            onError={setErrorMessage}
+            onStatus={setStatusMessage}
+            renderTrigger={({ isUploading, openPicker }) => (
+              <button className="primary-link button-reset" disabled={isUploading} onClick={openPicker} type="button">
+                <span className="action-copy">
+                  <span className="action-copy-zh">{isUploading ? "正在上传" : "上传 EPUB"}</span>
+                  <span className="action-copy-en">{isUploading ? "Uploading..." : "Upload EPUB"}</span>
+                </span>
+              </button>
+            )}
+          />
         </div>
       </header>
-
-      <input
-        accept=".epub,application/epub+zip"
-        className="hidden-input"
-        onChange={handleFileSelected}
-        ref={inputRef}
-        type="file"
-      />
 
       {errorMessage ? <p className="form-error page-feedback">{errorMessage}</p> : null}
       {statusMessage ? <p className="form-success page-feedback">{statusMessage}</p> : null}

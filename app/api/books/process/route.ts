@@ -3,6 +3,7 @@ import { BookImportAccessError, BookImportNotFoundError, processUploadedBookForU
 import { getCurrentUser } from "@/lib/supabase/auth";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try {

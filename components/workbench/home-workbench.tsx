@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 import { useEffect, useState } from "react";
 import { AuthorStatusCard } from "@/components/books/author-status-card";
+import { BookUploadControl } from "@/components/bookshelf/book-upload-control";
 import { DarkRail } from "@/components/workbench/dark-rail";
 import { getAuthorStatusCardContent } from "@/lib/books/author-status-card";
 import { getDefaultAuthorStatusCard } from "@/lib/author-status/time-mood";
@@ -56,7 +57,15 @@ function getNotePreview(note: PersonalNote | null) {
   return note.aiContent || note.noteContent || note.sourceText || note.paragraphExcerpt;
 }
 
-function HomeBookshelfShelf({ books }: { books: BookshelfItem[] }) {
+function HomeBookshelfShelf({
+  books,
+  onUploadError,
+  onUploadStatus
+}: {
+  books: BookshelfItem[];
+  onUploadError: (message: string | null) => void;
+  onUploadStatus: (message: string | null) => void;
+}) {
   const displayBooks = books.slice(0, 7);
 
   return (
@@ -86,24 +95,32 @@ function HomeBookshelfShelf({ books }: { books: BookshelfItem[] }) {
               </span>
             </Link>
           ))}
-          <Link
-            aria-label="上传自己的 EPUB 书籍"
-            className="home-book-link home-book-empty"
-            href="/bookshelf"
-            style={
-              {
-                "--book-accent": "#FFFFFF",
-                "--book-delay": `${displayBooks.length * 40}ms`,
-                "--book-height": "86%",
-                "--book-width": "42px"
-              } as CSSProperties
-            }
-          >
-            <span className="home-book-2d">
-              <span className="home-book-2d-title">上传 EPUB</span>
-            </span>
-            <span aria-hidden="true" className="home-book-plus">+</span>
-          </Link>
+          <BookUploadControl
+            onError={onUploadError}
+            onStatus={onUploadStatus}
+            renderTrigger={({ isUploading, openPicker }) => (
+              <button
+                aria-label="上传自己的 EPUB 书籍"
+                className="home-book-link home-book-empty button-reset"
+                disabled={isUploading}
+                onClick={openPicker}
+                style={
+                  {
+                    "--book-accent": "#FFFFFF",
+                    "--book-delay": `${displayBooks.length * 40}ms`,
+                    "--book-height": "86%",
+                    "--book-width": "42px"
+                  } as CSSProperties
+                }
+                type="button"
+              >
+                <span className="home-book-2d">
+                  <span className="home-book-2d-title">{isUploading ? "上传中" : "上传 EPUB"}</span>
+                </span>
+                <span aria-hidden="true" className="home-book-plus">+</span>
+              </button>
+            )}
+          />
         </div>
       </div>
     </section>
@@ -155,6 +172,8 @@ export function HomeWorkbench({ books, latestNote, noteCount, userEmail }: HomeW
   const readyBookIds = readyBooks.map((book) => book.id);
   const readyBookSignature = readyBookIds.join("|");
   const [featuredBookId, setFeaturedBookId] = useState<string | null>(fallbackFeaturedBook?.id ?? null);
+  const [uploadErrorMessage, setUploadErrorMessage] = useState<string | null>(null);
+  const [uploadStatusMessage, setUploadStatusMessage] = useState<string | null>(null);
   const featuredBook = readyBooks.find((book) => book.id === featuredBookId) ?? fallbackFeaturedBook;
 
   useEffect(() => {
@@ -187,9 +206,15 @@ export function HomeWorkbench({ books, latestNote, noteCount, userEmail }: HomeW
         </div>
 
         <div className="entry-card-list entry-card-split home-entry-shelf-layout">
-          <HomeBookshelfShelf books={books} />
+          <HomeBookshelfShelf
+            books={books}
+            onUploadError={setUploadErrorMessage}
+            onUploadStatus={setUploadStatusMessage}
+          />
           <HomeNoteSticky latestNote={latestNote} noteCount={noteCount} />
         </div>
+        {uploadErrorMessage ? <p className="form-error page-feedback">{uploadErrorMessage}</p> : null}
+        {uploadStatusMessage ? <p className="form-success page-feedback">{uploadStatusMessage}</p> : null}
       </section>
     </main>
   );

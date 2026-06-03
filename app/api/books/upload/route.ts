@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/supabase/auth";
 import { getSupabaseServiceRoleClient } from "@/lib/supabase/service-role";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try {

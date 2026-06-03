@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/supabase/auth";
 import type { AuthorStatusApiResponse } from "@/types/author-status";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 function normalizeHour(value: string | null) {
   if (!value) {
