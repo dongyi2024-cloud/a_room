@@ -1,38 +1,13 @@
 import "server-only";
 
-import { execFile } from "node:child_process";
-import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import path from "node:path";
-import { promisify } from "node:util";
 import { BOOK_FILES_BUCKET } from "@/lib/bookshelf/constants";
+import { parseEpubBuffer, type ParsedEpubCover, type ParsedEpubPayload } from "@/lib/bookshelf/epub-parser";
 import { toShortErrorMessage } from "@/lib/bookshelf/helpers";
 import { ensureBookFilesBucket } from "@/lib/bookshelf/storage";
 import { generateBookChunksForUser } from "@/lib/rag/chunking";
 import { generateBookEmbeddingsForUser } from "@/lib/rag/embeddings";
 import { generateBookSmartMarksForUser } from "@/lib/smart-marks/generation";
 import { getSupabaseServiceRoleClient } from "@/lib/supabase/service-role";
-import type { Database } from "@/types/supabase";
-
-type RawParagraph = {
-  order_index: number;
-  content: string;
-};
-
-type RawChapter = {
-  order_index: number;
-  title: string;
-  paragraphs: RawParagraph[];
-};
-
-type ParsedBookPayload = {
-  title: string;
-  author: string;
-  language: string;
-  description: string;
-  cover_path?: string;
-  chapters: RawChapter[];
-};
 
 export class BookImportNotFoundError extends Error {
   constructor(message = "Book import record was not found.") {
@@ -48,50 +23,18 @@ export class BookImportAccessError extends Error {
   }
 }
 
-const execFileAsync = promisify(execFile);
-const CONVERTER_SCRIPT_PATH = path.join(process.cwd(), "epub", "convert_epub_to_json.py");
-
-async function runConverter(inputDir: string, outputDir: string) {
-  await execFileAsync("python3", [CONVERTER_SCRIPT_PATH, "--input-dir", inputDir, "--output-dir", outputDir], {
-    cwd: process.cwd(),
-    maxBuffer: 10 * 1024 * 1024
-  });
-}
-
-async function readParsedBookPayload(outputDir: string) {
-  const files = await readdir(outputDir);
-  const jsonFileName = files.find((fileName) => fileName.endsWith(".json"));
-
-  if (!jsonFileName) {
-    throw new Error("EPUB parser did not produce a JSON payload.");
-  }
-
-  const rawContent = await readFile(path.join(outputDir, jsonFileName), "utf8");
-
-  return JSON.parse(rawContent) as ParsedBookPayload;
-}
-
-async function uploadCoverIfPresent(
-  userId: string,
-  bookId: string,
-  outputDir: string,
-  coverPath?: string
-) {
-  if (!coverPath) {
+async function uploadCoverIfPresent(userId: string, bookId: string, cover?: ParsedEpubCover) {
+  if (!cover) {
     return null;
   }
 
-  const coverFileName = path.basename(coverPath);
-  const absoluteCoverPath = path.join(outputDir, coverFileName);
-
   try {
-    const coverBuffer = await readFile(absoluteCoverPath);
-    const storagePath = `${userId}/${bookId}/cover${path.extname(coverFileName) || ".jpg"}`;
+    const storagePath = `${userId}/${bookId}/cover${cover.extension}`;
     const serviceClient = getSupabaseServiceRoleClient();
     await ensureBookFilesBucket(serviceClient);
-    const { error } = await serviceClient.storage.from(BOOK_FILES_BUCKET).upload(storagePath, coverBuffer, {
+    const { error } = await serviceClient.storage.from(BOOK_FILES_BUCKET).upload(storagePath, cover.buffer, {
       upsert: true,
-      contentType: coverFileName.toLowerCase().endsWith(".png") ? "image/png" : "image/jpeg"
+      contentType: cover.contentType
     });
 
     if (error) {
@@ -161,7 +104,7 @@ async function markBookProcessing(bookId: string) {
 
 async function replaceBookContent(
   bookId: string,
-  payload: ParsedBookPayload,
+  payload: ParsedEpubPayload,
   coverStoragePath: string | null
 ) {
   const serviceClient = getSupabaseServiceRoleClient();
@@ -261,13 +204,6 @@ export async function processUploadedBookForUser(params: { bookId: string; userI
   const { bookId, userId } = params;
   const book = await getOwnedBookForProcessing(bookId, userId);
 
-  const workspaceDir = await mkdtemp(path.join(tmpdir(), "woolf-room-import-"));
-  const inputDir = path.join(workspaceDir, "input");
-  const outputDir = path.join(workspaceDir, "output");
-
-  await mkdir(inputDir, { recursive: true });
-  await mkdir(outputDir, { recursive: true });
-
   try {
     await markBookProcessing(bookId);
     const serviceClient = getSupabaseServiceRoleClient();
@@ -281,13 +217,8 @@ export async function processUploadedBookForUser(params: { bookId: string; userI
     }
 
     const epubBuffer = Buffer.from(await fileBlob.arrayBuffer());
-    const inputFilePath = path.join(inputDir, path.basename(book.source_storage_path));
-
-    await writeFile(inputFilePath, epubBuffer);
-    await runConverter(inputDir, outputDir);
-
-    const payload = await readParsedBookPayload(outputDir);
-    const coverStoragePath = await uploadCoverIfPresent(userId, bookId, outputDir, payload.cover_path);
+    const payload = parseEpubBuffer(epubBuffer);
+    const coverStoragePath = await uploadCoverIfPresent(userId, bookId, payload.cover);
 
     await replaceBookContent(bookId, payload, coverStoragePath);
 
@@ -322,7 +253,5 @@ export async function processUploadedBookForUser(params: { bookId: string; userI
   } catch (error) {
     await markBookFailed(bookId, error);
     throw error;
-  } finally {
-    await rm(workspaceDir, { recursive: true, force: true });
   }
 }
