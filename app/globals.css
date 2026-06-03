@@ -2926,17 +2926,21 @@ body {
 }
 
 .reader-ai-panel-header {
-  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .reader-ai-panel-header > div:first-child {
-  padding-right: 42px;
+  min-width: 0;
 }
 
 .reader-ai-panel-header-actions {
-  position: absolute;
-  top: 34px;
-  right: 0;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
   justify-content: flex-end;
   margin-left: 0;
   padding-right: 0;
@@ -2950,10 +2954,8 @@ body {
 }
 
 .reader-ai-panel-close {
-  position: absolute;
-  top: 0;
-  right: 0;
   display: grid;
+  flex: 0 0 auto;
   width: 28px;
   height: 28px;
   place-items: center;
