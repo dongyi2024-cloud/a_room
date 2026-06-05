@@ -14,6 +14,7 @@ type BookshelfShellProps = {
 export function BookshelfShell({ items, userEmail }: BookshelfShellProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [uploadedBookId, setUploadedBookId] = useState<string | null>(null);
 
   return (
     <>
@@ -53,6 +54,7 @@ export function BookshelfShell({ items, userEmail }: BookshelfShellProps) {
           </Link>
           <BookUploadControl
             onError={setErrorMessage}
+            onUploadComplete={(result) => setUploadedBookId(result.bookId)}
             onStatus={setStatusMessage}
             renderTrigger={({ isUploading, openPicker }) => (
               <button className="primary-link button-reset" disabled={isUploading} onClick={openPicker} type="button">
@@ -68,6 +70,14 @@ export function BookshelfShell({ items, userEmail }: BookshelfShellProps) {
 
       {errorMessage ? <p className="form-error page-feedback">{errorMessage}</p> : null}
       {statusMessage ? <p className="form-success page-feedback">{statusMessage}</p> : null}
+      {uploadedBookId ? (
+        <div className="upload-next-step" role="status">
+          <p>下一步：进入阅读器，选中一句话试试 Ask Woolf。</p>
+          <Link className="primary-link" href={`/reader/${uploadedBookId}`}>
+            开始阅读
+          </Link>
+        </div>
+      ) : null}
 
       {items.length === 0 ? (
         <section className="soft-card empty-state">

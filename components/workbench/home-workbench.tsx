@@ -11,12 +11,15 @@ import { getDefaultAuthorStatusCard } from "@/lib/author-status/time-mood";
 import { getMostRecentProgressBookId } from "@/lib/reader/progress-store";
 import type { BookshelfItem } from "@/types/bookshelf";
 import type { PersonalNote } from "@/types/personal-notes";
+import type { ReaderBookSummary } from "@/types/reader";
 
 type HomeWorkbenchProps = {
   books: BookshelfItem[];
   communityCount: number;
+  isGuest?: boolean;
   latestNote: PersonalNote | null;
   noteCount: number;
+  sampleBook?: ReaderBookSummary | null;
   userEmail: string | null;
 };
 
@@ -59,20 +62,48 @@ function getNotePreview(note: PersonalNote | null) {
 
 function HomeBookshelfShelf({
   books,
+  isGuest = false,
   onUploadError,
-  onUploadStatus
+  onUploadComplete,
+  onUploadStatus,
+  sampleBook
 }: {
   books: BookshelfItem[];
+  isGuest?: boolean;
   onUploadError: (message: string | null) => void;
+  onUploadComplete?: (result: { bookId: string; ragStatus?: "processing" | "ready" | "failed" }) => void;
   onUploadStatus: (message: string | null) => void;
+  sampleBook?: ReaderBookSummary | null;
 }) {
   const displayBooks = books.slice(0, 7);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
   return (
     <section aria-label="首页书架" className="home-bookshelf-shelf">
       <div className="home-bookshelf-stage">
         <div className="bookshelf-plank" />
         <div className="bookshelf-book-row">
+          {isGuest && sampleBook ? (
+            <Link
+              aria-label={`进入样例阅读 ${sampleBook.title}`}
+              className="home-book-link is-sample-book"
+              href={`/reader/${sampleBook.id}`}
+              style={
+                {
+                  "--book-accent": "var(--color-bg)",
+                  "--book-delay": "0ms",
+                  "--book-height": "100%",
+                  "--book-width": "46px"
+                } as CSSProperties
+              }
+            >
+              <span className="home-book-2d">
+                <span className="home-book-2d-band" />
+                <span className="home-book-2d-title">{sampleBook.title}</span>
+                <span className="home-book-2d-author">{sampleBook.author}</span>
+              </span>
+            </Link>
+          ) : null}
           {displayBooks.map((book, index) => (
             <Link
               aria-label={book.importStatus === "ready" ? `进入阅读 ${book.title}` : `${book.title} 正在处理`}
@@ -95,10 +126,36 @@ function HomeBookshelfShelf({
               </span>
             </Link>
           ))}
-          <BookUploadControl
-            onError={onUploadError}
-            onStatus={onUploadStatus}
-            renderTrigger={({ isUploading, openPicker }) => (
+          {isGuest ? (
+            <button
+              aria-label="登录后上传自己的 EPUB 书籍"
+              className="home-book-link home-book-empty button-reset"
+              onClick={() => {
+                onUploadError(null);
+                onUploadStatus(null);
+                setShowLoginPrompt(true);
+              }}
+              style={
+                {
+                  "--book-accent": "#FFFFFF",
+                  "--book-delay": `${(displayBooks.length + (sampleBook ? 1 : 0)) * 40}ms`,
+                  "--book-height": "86%",
+                  "--book-width": "42px"
+                } as CSSProperties
+              }
+              type="button"
+            >
+              <span className="home-book-2d">
+                <span className="home-book-2d-title">上传 EPUB</span>
+              </span>
+              <span aria-hidden="true" className="home-book-plus">+</span>
+            </button>
+          ) : (
+            <BookUploadControl
+              onError={onUploadError}
+              onUploadComplete={onUploadComplete}
+              onStatus={onUploadStatus}
+              renderTrigger={({ isUploading, openPicker }) => (
               <button
                 aria-label="上传自己的 EPUB 书籍"
                 className="home-book-link home-book-empty button-reset"
@@ -119,10 +176,28 @@ function HomeBookshelfShelf({
                 </span>
                 <span aria-hidden="true" className="home-book-plus">+</span>
               </button>
-            )}
-          />
+              )}
+            />
+          )}
         </div>
       </div>
+      {showLoginPrompt ? (
+        <div className="login-required-panel" role="dialog" aria-modal="true" aria-label="上传 EPUB 需要登录">
+          <div className="login-required-card">
+            <p className="page-eyebrow">Upload EPUB</p>
+            <h3>登录后上传自己的书</h3>
+            <p>样例书可以直接阅读；上传 EPUB 会写入你的私人书架，因此需要先登录或注册。</p>
+            <div className="login-required-actions">
+              <Link className="primary-link" href="/login?next=%2F%3Fupload%3D1">
+                登录 / 注册
+              </Link>
+              <button className="secondary-link button-reset" onClick={() => setShowLoginPrompt(false)} type="button">
+                继续看样例
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -165,7 +240,14 @@ function getAskWoolfHref(books: BookshelfItem[]) {
   return targetBookId ? `/reader/${targetBookId}?ask=1` : "/bookshelf";
 }
 
-export function HomeWorkbench({ books, latestNote, noteCount, userEmail }: HomeWorkbenchProps) {
+export function HomeWorkbench({
+  books,
+  isGuest = false,
+  latestNote,
+  noteCount,
+  sampleBook = null,
+  userEmail
+}: HomeWorkbenchProps) {
   const readyBooks = books.filter((book) => book.importStatus === "ready");
   const askHref = getAskWoolfHref(books);
   const fallbackFeaturedBook = readyBooks[0] ?? null;
@@ -174,6 +256,7 @@ export function HomeWorkbench({ books, latestNote, noteCount, userEmail }: HomeW
   const [featuredBookId, setFeaturedBookId] = useState<string | null>(fallbackFeaturedBook?.id ?? null);
   const [uploadErrorMessage, setUploadErrorMessage] = useState<string | null>(null);
   const [uploadStatusMessage, setUploadStatusMessage] = useState<string | null>(null);
+  const [uploadedBookId, setUploadedBookId] = useState<string | null>(null);
   const featuredBook = readyBooks.find((book) => book.id === featuredBookId) ?? fallbackFeaturedBook;
 
   useEffect(() => {
@@ -208,13 +291,24 @@ export function HomeWorkbench({ books, latestNote, noteCount, userEmail }: HomeW
         <div className="entry-card-list entry-card-split home-entry-shelf-layout">
           <HomeBookshelfShelf
             books={books}
+            isGuest={isGuest}
             onUploadError={setUploadErrorMessage}
+            onUploadComplete={(result) => setUploadedBookId(result.bookId)}
             onUploadStatus={setUploadStatusMessage}
+            sampleBook={sampleBook}
           />
           <HomeNoteSticky latestNote={latestNote} noteCount={noteCount} />
         </div>
         {uploadErrorMessage ? <p className="form-error page-feedback">{uploadErrorMessage}</p> : null}
         {uploadStatusMessage ? <p className="form-success page-feedback">{uploadStatusMessage}</p> : null}
+        {uploadedBookId ? (
+          <div className="upload-next-step" role="status">
+            <p>下一步：进入阅读器，选中一句话试试 Ask Woolf。</p>
+            <Link className="primary-link" href={`/reader/${uploadedBookId}`}>
+              开始阅读
+            </Link>
+          </div>
+        ) : null}
       </section>
     </main>
   );

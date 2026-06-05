@@ -2,7 +2,8 @@ import { HomeWorkbench } from "@/components/workbench/home-workbench";
 import { getUserBookshelfItems } from "@/lib/bookshelf/data";
 import { listPersonalNotes } from "@/lib/notes/data";
 import { listAllReflectionCards } from "@/lib/reflections/data";
-import { requireUser } from "@/lib/supabase/auth";
+import { getSampleShengSiChangSummary } from "@/lib/sample-books/sheng-si-chang";
+import { getCurrentUser } from "@/lib/supabase/auth";
 import type { BookshelfItem } from "@/types/bookshelf";
 import type { PersonalNote } from "@/types/personal-notes";
 
@@ -42,7 +43,22 @@ async function safelyLoadCommunityCount(userId: string) {
 }
 
 export default async function HomePage() {
-  const user = await requireUser("/");
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return (
+      <HomeWorkbench
+        books={[]}
+        communityCount={0}
+        isGuest
+        latestNote={null}
+        noteCount={0}
+        sampleBook={getSampleShengSiChangSummary()}
+        userEmail={null}
+      />
+    );
+  }
+
   const [books, noteSummary, communityCount] = await Promise.all([
     safelyLoadBooks(user.id),
     safelyLoadNoteSummary(user.id),

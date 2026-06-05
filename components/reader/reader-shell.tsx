@@ -30,6 +30,7 @@ type ReaderShellProps = {
   book: ReaderBookDetail;
   initialChapterIndex: number;
   initialParagraphId?: string;
+  isSampleReader?: boolean;
   openAiHint?: boolean;
   readerUserId?: string;
 };
@@ -81,6 +82,7 @@ type DialogueSummaryReviewState = {
 
 const READER_SELECTION_HIGHLIGHT_NAME = "reader-selection";
 const READER_AI_MODE_STORAGE_KEY = "reader-selection-ai-mode";
+const READER_SELECTION_ONBOARDING_STORAGE_KEY = "woolf-room.reader-selection-onboarding.v1";
 const READER_LAST_OPEN_SIGNATURE_KEY = "woolf-room.reader-last-open.v1";
 const READER_AI_REQUEST_TIMEOUT_MS = 95000;
 const SMART_MARK_LONG_PRESS_MS = 450;
@@ -318,6 +320,7 @@ export function ReaderShell({
   book,
   initialChapterIndex,
   initialParagraphId,
+  isSampleReader = false,
   openAiHint = false,
   readerUserId
 }: ReaderShellProps) {
@@ -326,7 +329,9 @@ export function ReaderShell({
   const [activeChapterIndex, setActiveChapterIndex] = useState(
     clampIndex(initialChapterIndex, Math.max(book.chapters.length - 1, 0))
   );
-  const [progressLabel, setProgressLabel] = useState("Progress will save automatically.");
+  const [progressLabel, setProgressLabel] = useState(
+    isSampleReader ? "样例阅读不会写入个人书架。" : "Progress will save automatically."
+  );
   const [activeExplanation, setActiveExplanation] = useState<ActiveExplanation | null>(null);
   const [selectionContext, setSelectionContext] = useState<ReaderSelectionContext | null>(null);
   const [activeSelectionPanel, setActiveSelectionPanel] = useState<"ai" | "reflection" | null>(null);
@@ -348,6 +353,7 @@ export function ReaderShell({
   const [chapterEndError, setChapterEndError] = useState("");
   const [isChapterEndSubmitting, setIsChapterEndSubmitting] = useState(false);
   const [showAiEntryHint, setShowAiEntryHint] = useState(openAiHint);
+  const [showSelectionOnboarding, setShowSelectionOnboarding] = useState(false);
   const [isRescuePackOpen, setIsRescuePackOpen] = useState(false);
 
   const userIdRef = useRef<string | null>(null);
@@ -374,6 +380,7 @@ export function ReaderShell({
 
   const activeChapter = book.chapters[activeChapterIndex];
   const hasReadableChapter = activeChapter.paragraphs.length > 0;
+  const canUseAccountActions = Boolean(readerUserId) && !isSampleReader;
 
   function recordReaderBehavior(
     eventType: ReadingBehaviorEventType,
@@ -383,7 +390,7 @@ export function ReaderShell({
       metadata?: Record<string, unknown>;
     } = {}
   ) {
-    if (typeof window === "undefined") {
+    if (typeof window === "undefined" || !canUseAccountActions) {
       return;
     }
 
@@ -428,12 +435,30 @@ export function ReaderShell({
     }
   }
 
+  function dismissSelectionOnboarding() {
+    setShowSelectionOnboarding(false);
+
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    try {
+      window.localStorage.setItem(READER_SELECTION_ONBOARDING_STORAGE_KEY, "dismissed");
+    } catch {
+      // The hint is non-critical; ignore storage failures.
+    }
+  }
+
   function updateChapterInUrl(chapterNumber: number) {
     router.replace(`${pathname}?chapter=${chapterNumber}`, { scroll: false });
   }
 
   function saveProgressForCurrentView() {
     if (typeof window === "undefined") {
+      return;
+    }
+
+    if (!canUseAccountActions) {
       return;
     }
 
@@ -723,6 +748,10 @@ export function ReaderShell({
     }
 
     setSelectionContext(nextSelectionContext);
+
+    if (nextSelectionContext && showSelectionOnboarding) {
+      dismissSelectionOnboarding();
+    }
   }
 
   function scheduleSelectionSync(delay = 0) {
@@ -778,7 +807,7 @@ export function ReaderShell({
   }
 
   function openReflectionFromSelection() {
-    if (!selectionContext || selectionContext.paragraphOrder === null) {
+    if (!canUseAccountActions || !selectionContext || selectionContext.paragraphOrder === null) {
       return;
     }
 
@@ -790,7 +819,7 @@ export function ReaderShell({
   }
 
   function openReflectionPanelFromAi() {
-    if (!selectionContext || selectionContext.paragraphOrder === null) {
+    if (!canUseAccountActions || !selectionContext || selectionContext.paragraphOrder === null) {
       return;
     }
 
@@ -853,6 +882,16 @@ export function ReaderShell({
   }
 
   async function generateDialogueSummary() {
+    if (!canUseAccountActions) {
+      setDialogueSummary({
+        status: "error",
+        draft: null,
+        editableSummary: "",
+        error: "登录后才能把 AI 对话整理为私人笔记。"
+      });
+      return;
+    }
+
     if (!selectionContext || !selectionContext.paragraphId || selectionContext.paragraphOrder === null) {
       setDialogueSummary({
         status: "error",
@@ -929,6 +968,10 @@ export function ReaderShell({
   }
 
   async function saveDialogueSummaryNote() {
+    if (!canUseAccountActions) {
+      return;
+    }
+
     if (
       !selectionContext ||
       !selectionContext.paragraphId ||
@@ -1023,7 +1066,7 @@ export function ReaderShell({
   }
 
   function openChapterEndPanel() {
-    if (!hasReadableChapter) {
+    if (!hasReadableChapter || !canUseAccountActions) {
       return;
     }
 
@@ -1056,6 +1099,11 @@ export function ReaderShell({
   }
 
   async function submitAiQuestion() {
+    if (!canUseAccountActions) {
+      setAiError("登录后才能向 Woolf 提问并保存你的阅读上下文。");
+      return;
+    }
+
     const question = aiQuestion.trim();
 
     if (!selectionContext || !question) {
@@ -1238,6 +1286,11 @@ export function ReaderShell({
   }
 
   async function submitChapterEndQuestion() {
+    if (!canUseAccountActions) {
+      setChapterEndError("登录后才能围绕本章继续和 Woolf 对话。");
+      return;
+    }
+
     const question = chapterEndQuestion.trim();
 
     if (!question || !hasReadableChapter) {
@@ -1310,8 +1363,8 @@ export function ReaderShell({
       return;
     }
 
-    userIdRef.current = readerUserId ?? getCurrentReaderUserId();
-    const savedProgress = getReadingProgress(userIdRef.current, book.id);
+    userIdRef.current = canUseAccountActions ? readerUserId ?? getCurrentReaderUserId() : null;
+    const savedProgress = userIdRef.current ? getReadingProgress(userIdRef.current, book.id) : null;
     const initialParagraphTarget = initialParagraphId
       ? book.chapters
           .map((chapter, chapterIndex) => ({
@@ -1331,7 +1384,9 @@ export function ReaderShell({
       skipNextScrollResetRef.current = true;
       setActiveChapterIndex(initialParagraphTarget.chapterIndex);
       updateChapterInUrl(initialParagraphTarget.chapter.orderIndex);
-      writeLastOpenSignature(`${book.id}:${initialParagraphTarget.chapter.orderIndex}:${initialParagraphTarget.paragraph.orderIndex}`);
+      if (canUseAccountActions) {
+        writeLastOpenSignature(`${book.id}:${initialParagraphTarget.chapter.orderIndex}:${initialParagraphTarget.paragraph.orderIndex}`);
+      }
     } else if (savedProgress) {
       const restoredChapterIndex = clampIndex(savedProgress.chapterOrder - 1, book.chapters.length - 1);
       const chapter = book.chapters[restoredChapterIndex];
@@ -1358,7 +1413,9 @@ export function ReaderShell({
     } else {
       const chapter = book.chapters[clampIndex(initialChapterIndex, book.chapters.length - 1)];
       updateChapterInUrl(chapter.orderIndex);
-      writeLastOpenSignature(`${book.id}:${chapter.orderIndex}:1`);
+      if (canUseAccountActions) {
+        writeLastOpenSignature(`${book.id}:${chapter.orderIndex}:1`);
+      }
     }
 
     recordReaderBehavior("reader_opened", {
@@ -1367,7 +1424,7 @@ export function ReaderShell({
     });
     restoredBookIdRef.current = book.id;
     initializedRef.current = true;
-  }, [book, initialChapterIndex, initialParagraphId, pathname, readerUserId, router]);
+  }, [book, canUseAccountActions, initialChapterIndex, initialParagraphId, pathname, readerUserId, router]);
 
   useEffect(() => {
     if (!initializedRef.current) {
@@ -1421,17 +1478,31 @@ export function ReaderShell({
 
     if (!skipNextScrollResetRef.current) {
       window.scrollTo({ top: 0, behavior: "auto" });
-      window.setTimeout(() => {
-        saveProgressForCurrentView();
-      }, 60);
+      if (canUseAccountActions) {
+        window.setTimeout(() => {
+          saveProgressForCurrentView();
+        }, 60);
+      }
     }
 
     skipNextScrollResetRef.current = false;
-  }, [activeChapterIndex, activeChapter.orderIndex, activeChapter.paragraphs.length, activeChapter.paragraphs[0]?.orderIndex, book.id]);
+  }, [
+    activeChapterIndex,
+    activeChapter.orderIndex,
+    activeChapter.paragraphs.length,
+    activeChapter.paragraphs[0]?.orderIndex,
+    book.id,
+    canUseAccountActions
+  ]);
 
   useEffect(() => {
     if (!hasReadableChapter) {
       setChapterEndPromptQuestion("");
+      return;
+    }
+
+    if (!canUseAccountActions) {
+      setChapterEndPromptQuestion("选中正文里的一句话，先看看 Ask Woolf 会怎样从阅读现场出现。");
       return;
     }
 
@@ -1469,7 +1540,7 @@ export function ReaderShell({
         }
       }
     })();
-  }, [activeChapter, activeChapter.orderIndex, book.id, hasReadableChapter]);
+  }, [activeChapter, activeChapter.orderIndex, book.id, canUseAccountActions, hasReadableChapter]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -1477,15 +1548,19 @@ export function ReaderShell({
     }
 
     const onScroll = () => {
-      scheduleProgressSave();
+      if (canUseAccountActions) {
+        scheduleProgressSave();
+      }
     };
     const onVisibilityChange = () => {
-      if (document.visibilityState === "hidden") {
+      if (document.visibilityState === "hidden" && canUseAccountActions) {
         saveProgressForCurrentView();
       }
     };
     const onBeforeUnload = () => {
-      saveProgressForCurrentView();
+      if (canUseAccountActions) {
+        saveProgressForCurrentView();
+      }
     };
 
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -1502,7 +1577,7 @@ export function ReaderShell({
       cancelSmartMarkLongPress();
       cancelSmartMarkHide();
     };
-  }, [activeChapterIndex, book.id]);
+  }, [activeChapterIndex, book.id, canUseAccountActions]);
 
   useEffect(() => {
     isSelectionPanelOpenRef.current = activeSelectionPanel !== null;
@@ -1524,6 +1599,18 @@ export function ReaderShell({
       }
     });
   }, [activeSelectionPanel, aiTurns, aiError]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    try {
+      setShowSelectionOnboarding(window.localStorage.getItem(READER_SELECTION_ONBOARDING_STORAGE_KEY) !== "dismissed");
+    } catch {
+      setShowSelectionOnboarding(true);
+    }
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -1609,12 +1696,12 @@ export function ReaderShell({
               <button className="primary-link button-reset" onClick={openAiPanel} type="button">
                 Ask Woolf
               </button>
-              {selectionContext.paragraphOrder !== null ? (
+              {canUseAccountActions && selectionContext.paragraphOrder !== null ? (
                 <button className="secondary-link button-reset" onClick={openReflectionFromSelection} type="button">
                   写下感受
                 </button>
               ) : null}
-              {selectionContext.paragraphId ? (
+              {canUseAccountActions && selectionContext.paragraphId ? (
                 <SaveNoteButton
                   payload={{
                     bookId: book.id,
@@ -1654,7 +1741,7 @@ export function ReaderShell({
                 ) : null}
               </div>
               <div className="reader-ai-panel-header-actions">
-                {selectionContext.paragraphOrder !== null ? (
+                {canUseAccountActions && selectionContext.paragraphOrder !== null ? (
                   <button className="reader-ai-panel-toggle button-reset" onClick={openReflectionPanelFromAi} type="button">
                     写感受
                   </button>
@@ -1664,6 +1751,20 @@ export function ReaderShell({
                 </button>
               </div>
             </div>
+            {!canUseAccountActions ? (
+              <div className="reader-login-note">
+                <p>你已经选中了这段文字。登录后可以让 Woolf 围绕它回答，也可以把回答和感受保存到自己的书架。</p>
+                <div className="reader-login-note-actions">
+                  <Link className="primary-link" href={`/login?next=${encodeURIComponent(`/reader/${book.id}?ask=1`)}`}>
+                    登录 / 注册
+                  </Link>
+                  <button className="secondary-link button-reset" onClick={closeSelectionPanel} type="button">
+                    继续阅读
+                  </button>
+                </div>
+              </div>
+            ) : null}
+            {canUseAccountActions ? (
             <div className="reader-ai-conversation" ref={aiConversationRef}>
               {aiTurns.length > 0 ? (
                 <div className="reader-ai-transcript">
@@ -1890,6 +1991,8 @@ export function ReaderShell({
                 </section>
               ) : null}
             </div>
+            ) : null}
+            {canUseAccountActions ? (
             <div className="reader-ai-composer">
               {aiError ? <p className="reader-ai-inline-error">{aiError}</p> : null}
               <div className="reader-ai-mode-toggle" role="group" aria-label="Explanation mode">
@@ -1928,11 +2031,13 @@ export function ReaderShell({
                 </button>
               </div>
             </div>
+            ) : null}
           </aside>,
           document.body
         )
       : null;
   const reflectionSelectionContext: ReflectionSelectionContext | null =
+    canUseAccountActions &&
     activeSelectionPanel === "reflection" &&
     selectionContext !== null &&
     selectionContext.paragraphId !== null &&
@@ -1988,9 +2093,18 @@ export function ReaderShell({
           <p className="page-eyebrow">Reader</p>
           <h1 className="page-title">{book.title}</h1>
           <p className="page-subtitle">
-            The reading surface remembers where this signed-in reader left off and restores the
-            nearest valid place on re-entry.
+            {isSampleReader
+              ? "这是一段公开样例阅读。选中正文中的一句话，可以看到 Ask Woolf 如何从阅读现场出现。"
+              : "The reading surface remembers where this signed-in reader left off and restores the nearest valid place on re-entry."}
           </p>
+          {showSelectionOnboarding ? (
+            <div className="reader-onboarding-note" role="status">
+              <p>试着用鼠标或手指选中正文里的一句话，Ask Woolf 会在旁边出现。</p>
+              <button className="button-reset" onClick={dismissSelectionOnboarding} type="button">
+                知道了
+              </button>
+            </div>
+          ) : null}
           {showAiEntryHint ? (
             <div className="reader-ai-deeplink-note" role="status">
               <p>Ask Woolf 已准备好。请先在正文中选中一段文字，再点击浮层里的 Ask Woolf 提问。</p>
@@ -2000,8 +2114,8 @@ export function ReaderShell({
             </div>
           ) : null}
         </div>
-        <Link className="secondary-link" href="/bookshelf">
-          Back to bookshelf
+        <Link className="secondary-link" href={isSampleReader ? "/" : "/bookshelf"}>
+          {isSampleReader ? "返回首页" : "Back to bookshelf"}
         </Link>
       </header>
 
@@ -2033,12 +2147,14 @@ export function ReaderShell({
             </div>
           </div>
 
-          <RescuePackReminder
-            bookId={book.id}
-            bookTitle={book.title}
-            chapterOrder={activeChapter.orderIndex}
-            onOpenRescuePack={openRescuePack}
-          />
+          {canUseAccountActions ? (
+            <RescuePackReminder
+              bookId={book.id}
+              bookTitle={book.title}
+              chapterOrder={activeChapter.orderIndex}
+              onOpenRescuePack={openRescuePack}
+            />
+          ) : null}
 
           <div className="reader-body" ref={readerBodyRef}>
             {activeChapter.paragraphs.map((paragraph) => {
@@ -2103,7 +2219,8 @@ export function ReaderShell({
                               <span className="reader-explanation-term">{markExplanation.targetText}</span>
                               <span className="reader-explanation-copy">{markExplanation.explanation}</span>
                               <span className="reader-explanation-actions">
-                                <SaveNoteButton
+                                {canUseAccountActions ? (
+                                  <SaveNoteButton
                                   payload={{
                                     bookId: book.id,
                                     chapterId: activeChapter.id,
@@ -2117,7 +2234,8 @@ export function ReaderShell({
                                       paragraphOrder: markExplanation.paragraphOrder
                                     }
                                   }}
-                                />
+                                  />
+                                ) : null}
                                 <button
                                   className="secondary-link button-reset"
                                   onClick={(event) =>
@@ -2139,7 +2257,7 @@ export function ReaderShell({
             })}
           </div>
 
-          {hasReadableChapter ? (
+          {canUseAccountActions && hasReadableChapter ? (
             <section
               className={`reader-rescue-pack${isRescuePackOpen ? " is-open" : ""}`}
               id="rescue-pack"
@@ -2161,7 +2279,7 @@ export function ReaderShell({
             </section>
           ) : null}
 
-          {hasReadableChapter ? (
+          {canUseAccountActions && hasReadableChapter ? (
             <section className="reader-chapter-end">
               <div className="reader-chapter-end-intro">
                 <div>

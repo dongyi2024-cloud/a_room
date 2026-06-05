@@ -14,6 +14,7 @@ type UploadTriggerProps = {
 
 type BookUploadControlProps = {
   onError?: (message: string | null) => void;
+  onUploadComplete?: (result: { bookId: string; ragStatus: ProcessBookResponse["ragStatus"] }) => void;
   onStatus?: (message: string | null) => void;
   renderTrigger: (props: UploadTriggerProps) => ReactNode;
 };
@@ -26,7 +27,9 @@ type InitiateUploadResponse = {
 };
 
 type ProcessBookResponse = {
+  bookId?: string;
   error?: string;
+  importStatus?: "processing" | "ready" | "failed";
   ragStatus?: "processing" | "ready" | "failed";
 };
 
@@ -62,17 +65,17 @@ async function cleanupCreatedBook(bookId: string) {
 
 function getProcessStatusMessage(ragStatus: ProcessBookResponse["ragStatus"]) {
   if (ragStatus === "ready") {
-    return "Book parsed successfully and added to your private shelf. AI is ready.";
+    return "已完成切片并加入私人书架。AI 准备完成，可以开始阅读。";
   }
 
   if (ragStatus === "failed") {
-    return "Book parsed successfully, but AI preparation failed. You can still open the reader.";
+    return "已完成切片，可以开始阅读；AI 准备失败，稍后可重试。";
   }
 
-  return "Book parsed successfully. AI preparation is still processing.";
+  return "已完成切片，可以开始阅读；AI 准备仍在处理中。";
 }
 
-export function BookUploadControl({ onError, onStatus, renderTrigger }: BookUploadControlProps) {
+export function BookUploadControl({ onError, onStatus, onUploadComplete, renderTrigger }: BookUploadControlProps) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -150,6 +153,10 @@ export function BookUploadControl({ onError, onStatus, renderTrigger }: BookUplo
       }
 
       onStatus?.(getProcessStatusMessage(processPayload.ragStatus));
+      onUploadComplete?.({
+        bookId: processPayload.bookId || bookId,
+        ragStatus: processPayload.ragStatus
+      });
       router.refresh();
     } catch (error) {
       onError?.(error instanceof Error ? error.message : "Unable to upload this EPUB.");

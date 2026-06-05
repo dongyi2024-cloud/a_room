@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ReaderShell } from "@/components/reader/reader-shell";
 import { getAccessibleReaderBook } from "@/lib/reader/books";
+import { getSampleShengSiChangBook, SAMPLE_SHENG_SI_CHANG_ID } from "@/lib/sample-books/sheng-si-chang";
 import { requireUser } from "@/lib/supabase/auth";
 
 type ReaderPageProps = {
@@ -48,6 +49,26 @@ function ReaderState({
 }
 
 export default async function ReaderPage({ params, searchParams }: ReaderPageProps) {
+  if (params.bookId === SAMPLE_SHENG_SI_CHANG_ID) {
+    const sampleBook = getSampleShengSiChangBook();
+    const requestedChapter = Number.parseInt(searchParams?.chapter ?? "1", 10);
+    const chapterIndex = Number.isFinite(requestedChapter)
+      ? Math.min(Math.max(requestedChapter, 1), sampleBook.chapters.length) - 1
+      : 0;
+
+    return (
+      <main className="app-shell">
+        <ReaderShell
+          book={sampleBook}
+          initialChapterIndex={chapterIndex}
+          initialParagraphId={searchParams?.paragraphId}
+          isSampleReader
+          openAiHint={searchParams?.ask === "1"}
+        />
+      </main>
+    );
+  }
+
   const user = await requireUser(`/reader/${params.bookId}`);
   let book = null;
 
