@@ -86,6 +86,7 @@ export type SelectionAiRequest = {
   explanationContext: SelectionAiExplanationContext | null;
   question: string;
   priorTurns: SelectionAiTurn[];
+  isSampleBook?: boolean;
 };
 
 export type ChapterEndAiRequest = {

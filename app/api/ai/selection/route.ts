@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { runSelectionAiWorkflow } from "@/lib/ai/selection-workflow";
 import { inferQuestionIntent, recordReadingBehaviorEvent } from "@/lib/reading-slump/data";
 import { getAccessibleReaderBook } from "@/lib/reader/books";
+import { getSampleShengSiChangBook, SAMPLE_SHENG_SI_CHANG_ID } from "@/lib/sample-books/sheng-si-chang";
 import { getCurrentUser } from "@/lib/supabase/auth";
 import type {
   SelectionAiExplanationContext,
@@ -165,7 +166,11 @@ export async function POST(request: Request) {
       return errorResponse("Enter a question before asking AI.", 400);
     }
 
-    const book = await getAccessibleReaderBook(user.id, bookId);
+    const book =
+      bookId === SAMPLE_SHENG_SI_CHANG_ID
+        ? getSampleShengSiChangBook()
+        : await getAccessibleReaderBook(user.id, bookId);
+    const isSampleBook = book?.id === SAMPLE_SHENG_SI_CHANG_ID;
 
     if (!book) {
       return errorResponse("This book is not available in your bookshelf.", 403);
@@ -192,29 +197,32 @@ export async function POST(request: Request) {
       explanationMode,
       explanationContext,
       question,
-      priorTurns
+      priorTurns,
+      isSampleBook
     };
 
-    try {
-      await recordReadingBehaviorEvent({
-        userId: user.id,
-        bookId: book.id,
-        eventType: "selection_ai_question",
-        chapterOrder: chapter.orderIndex,
-        paragraphOrder: paragraph?.orderIndex ?? null,
-        metadata: {
-          questionIntent: inferQuestionIntent(question),
-          explanationMode,
-          hasExplanationContext: Boolean(explanationContext),
-          priorTurnCount: priorTurns.length
-        }
-      });
-    } catch (eventError) {
-      console.warn("Unable to record selection AI reading event", {
-        bookId: book.id,
-        chapterId: chapter.id,
-        error: eventError
-      });
+    if (!isSampleBook) {
+      try {
+        await recordReadingBehaviorEvent({
+          userId: user.id,
+          bookId: book.id,
+          eventType: "selection_ai_question",
+          chapterOrder: chapter.orderIndex,
+          paragraphOrder: paragraph?.orderIndex ?? null,
+          metadata: {
+            questionIntent: inferQuestionIntent(question),
+            explanationMode,
+            hasExplanationContext: Boolean(explanationContext),
+            priorTurnCount: priorTurns.length
+          }
+        });
+      } catch (eventError) {
+        console.warn("Unable to record selection AI reading event", {
+          bookId: book.id,
+          chapterId: chapter.id,
+          error: eventError
+        });
+      }
     }
 
     const result = await runSelectionAiWorkflowWithTimeout(aiRequest);

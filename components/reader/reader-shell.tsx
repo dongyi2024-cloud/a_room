@@ -381,6 +381,7 @@ export function ReaderShell({
   const activeChapter = book.chapters[activeChapterIndex];
   const hasReadableChapter = activeChapter.paragraphs.length > 0;
   const canUseAccountActions = Boolean(readerUserId) && !isSampleReader;
+  const canAskSelectionAi = Boolean(readerUserId);
 
   function recordReaderBehavior(
     eventType: ReadingBehaviorEventType,
@@ -1099,8 +1100,8 @@ export function ReaderShell({
   }
 
   async function submitAiQuestion() {
-    if (!canUseAccountActions) {
-      setAiError("登录后才能向 Woolf 提问并保存你的阅读上下文。");
+    if (!canAskSelectionAi) {
+      setAiError("登录后才能向 Woolf 提问。");
       return;
     }
 
@@ -1751,7 +1752,7 @@ export function ReaderShell({
                 </button>
               </div>
             </div>
-            {!canUseAccountActions ? (
+            {!canAskSelectionAi ? (
               <div className="reader-login-note">
                 <p>你已经选中了这段文字。登录后可以让 Woolf 围绕它回答，也可以把回答和感受保存到自己的书架。</p>
                 <div className="reader-login-note-actions">
@@ -1992,7 +1993,7 @@ export function ReaderShell({
               ) : null}
             </div>
             ) : null}
-            {canUseAccountActions ? (
+            {canAskSelectionAi ? (
             <div className="reader-ai-composer">
               {aiError ? <p className="reader-ai-inline-error">{aiError}</p> : null}
               <div className="reader-ai-mode-toggle" role="group" aria-label="Explanation mode">

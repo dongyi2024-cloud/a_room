@@ -17,6 +17,8 @@ import { enforceWoolfFirstPersonVoice, getWoolfVoiceInstruction, loadWoolfPerson
 import { getResponseLanguageInstruction, inferResponseLanguage } from "@/lib/ai/response-language";
 import { loadAiMemoryContext, recordAiMemoryCandidates } from "@/lib/memory/data";
 import {
+  BookRetrievalAccessError,
+  BookRetrievalNotFoundError,
   BookRetrievalSourceUnavailableError,
   retrieveBookChunksForUser
 } from "@/lib/rag/retrieval";
@@ -688,6 +690,14 @@ const selectionWorkflow = new StateGraph(SelectionState)
     memoryContext: await loadAiMemoryContext(state.request.userId)
   }))
   .addNode("retrieveEvidence", async (state) => {
+    if (state.request.isSampleBook) {
+      return {
+        retrievedChunks: [],
+        retrievedChunkCount: 0,
+        insufficientEvidence: true
+      };
+    }
+
     try {
       const direction = detectParagraphDirection(state.request.question);
       const retrievalQuery = buildRetrievalQuery(state.request, state.recentTurns);
@@ -724,7 +734,11 @@ const selectionWorkflow = new StateGraph(SelectionState)
         insufficientEvidence: false
       };
     } catch (error) {
-      if (error instanceof BookRetrievalSourceUnavailableError) {
+      if (
+        error instanceof BookRetrievalSourceUnavailableError ||
+        error instanceof BookRetrievalNotFoundError ||
+        error instanceof BookRetrievalAccessError
+      ) {
         return {
           retrievedChunks: [],
           retrievedChunkCount: 0,
@@ -947,7 +961,7 @@ const selectionWorkflow = new StateGraph(SelectionState)
     answer: enforceAnswerLengthPolicy(state.answer, state.answerLengthPolicy)
   }))
   .addNode("proposeMemoryCandidate", async (state) => {
-    if (!state.answer || state.insufficientEvidence) {
+    if (!state.answer || state.insufficientEvidence || state.request.isSampleBook) {
       return {};
     }
 

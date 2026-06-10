@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ReaderShell } from "@/components/reader/reader-shell";
 import { getAccessibleReaderBook } from "@/lib/reader/books";
 import { getSampleShengSiChangBook, SAMPLE_SHENG_SI_CHANG_ID } from "@/lib/sample-books/sheng-si-chang";
-import { requireUser } from "@/lib/supabase/auth";
+import { getCurrentUser, requireUser } from "@/lib/supabase/auth";
 
 type ReaderPageProps = {
   params: {
@@ -50,6 +50,7 @@ function ReaderState({
 
 export default async function ReaderPage({ params, searchParams }: ReaderPageProps) {
   if (params.bookId === SAMPLE_SHENG_SI_CHANG_ID) {
+    const user = await getCurrentUser();
     const sampleBook = getSampleShengSiChangBook();
     const requestedChapter = Number.parseInt(searchParams?.chapter ?? "1", 10);
     const chapterIndex = Number.isFinite(requestedChapter)
@@ -64,6 +65,7 @@ export default async function ReaderPage({ params, searchParams }: ReaderPagePro
           initialParagraphId={searchParams?.paragraphId}
           isSampleReader
           openAiHint={searchParams?.ask === "1"}
+          readerUserId={user?.id}
         />
       </main>
     );
