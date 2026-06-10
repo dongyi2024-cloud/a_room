@@ -13,6 +13,10 @@ function sanitizeNextPath(nextPath?: string) {
     return "/";
   }
 
+  if (nextPath.startsWith("/reader/sample-sheng-si-chang")) {
+    return "/";
+  }
+
   return nextPath;
 }
 

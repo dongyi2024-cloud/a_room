@@ -1756,7 +1756,10 @@ export function ReaderShell({
               <div className="reader-login-note">
                 <p>你已经选中了这段文字。登录后可以让 Woolf 围绕它回答，也可以把回答和感受保存到自己的书架。</p>
                 <div className="reader-login-note-actions">
-                  <Link className="primary-link" href={`/login?next=${encodeURIComponent(`/reader/${book.id}?ask=1`)}`}>
+                  <Link
+                    className="primary-link"
+                    href={`/login?next=${encodeURIComponent(isSampleReader ? "/" : `/reader/${book.id}?ask=1`)}`}
+                  >
                     登录 / 注册
                   </Link>
                   <button className="secondary-link button-reset" onClick={closeSelectionPanel} type="button">

@@ -23,6 +23,16 @@ type HomeWorkbenchProps = {
   userEmail: string | null;
 };
 
+type HomeSummaryResponse = {
+  latestNote: PersonalNote | null;
+  noteCount: number;
+  communityCount: number;
+};
+
+function isHomeSummaryResponse(value: HomeSummaryResponse | { error?: string }): value is HomeSummaryResponse {
+  return "latestNote" in value && typeof value.noteCount === "number" && typeof value.communityCount === "number";
+}
+
 const HOME_BOOK_STYLES = [
   { accent: "var(--color-bg)", height: 98, width: 44 },
   { accent: "var(--color-bg)", height: 92, width: 38 },
@@ -242,6 +252,7 @@ function getAskWoolfHref(books: BookshelfItem[]) {
 
 export function HomeWorkbench({
   books,
+  communityCount,
   isGuest = false,
   latestNote,
   noteCount,
@@ -257,12 +268,50 @@ export function HomeWorkbench({
   const [uploadErrorMessage, setUploadErrorMessage] = useState<string | null>(null);
   const [uploadStatusMessage, setUploadStatusMessage] = useState<string | null>(null);
   const [uploadedBookId, setUploadedBookId] = useState<string | null>(null);
+  const [homeSummary, setHomeSummary] = useState<HomeSummaryResponse>({
+    latestNote,
+    noteCount,
+    communityCount
+  });
   const featuredBook = readyBooks.find((book) => book.id === featuredBookId) ?? fallbackFeaturedBook;
 
   useEffect(() => {
     const recentBookId = getMostRecentProgressBookId(readyBookIds);
     setFeaturedBookId(recentBookId ?? fallbackFeaturedBook?.id ?? null);
   }, [fallbackFeaturedBook?.id, readyBookSignature]);
+
+  useEffect(() => {
+    if (isGuest) {
+      return;
+    }
+
+    const controller = new AbortController();
+
+    fetch("/api/home/summary", {
+      headers: {
+        Accept: "application/json"
+      },
+      signal: controller.signal
+    })
+      .then(async (response) => {
+        const payload = (await response.json()) as HomeSummaryResponse | { error?: string };
+
+        if (!response.ok || !isHomeSummaryResponse(payload)) {
+          return;
+        }
+
+        setHomeSummary(payload);
+      })
+      .catch((error) => {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+      });
+
+    return () => {
+      controller.abort();
+    };
+  }, [isGuest]);
 
   return (
     <main className="home-workbench">
@@ -297,7 +346,7 @@ export function HomeWorkbench({
             onUploadStatus={setUploadStatusMessage}
             sampleBook={sampleBook}
           />
-          <HomeNoteSticky latestNote={latestNote} noteCount={noteCount} />
+          <HomeNoteSticky latestNote={homeSummary.latestNote} noteCount={homeSummary.noteCount} />
         </div>
         {uploadErrorMessage ? <p className="form-error page-feedback">{uploadErrorMessage}</p> : null}
         {uploadStatusMessage ? <p className="form-success page-feedback">{uploadStatusMessage}</p> : null}

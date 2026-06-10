@@ -3,7 +3,11 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 function sanitizeNextPath(nextPath: string | null) {
   if (!nextPath || !nextPath.startsWith("/")) {
-    return "/bookshelf";
+    return "/";
+  }
+
+  if (nextPath.startsWith("/reader/sample-sheng-si-chang")) {
+    return "/";
   }
 
   return nextPath;

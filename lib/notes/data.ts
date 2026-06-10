@@ -331,6 +331,65 @@ export async function listPersonalNotes(userId: string): Promise<PersonalNote[]>
   });
 }
 
+export async function getPersonalNoteHomeSummary(userId: string): Promise<{
+  latestNote: PersonalNote | null;
+  noteCount: number;
+}> {
+  const supabase = getSupabaseServiceRoleClient();
+  const { data, error, count } = await supabase
+    .from("personal_notes")
+    .select(
+      "id, user_id, book_id, chapter_id, paragraph_id, source_type, source_text, ai_content, note_content, paragraph_excerpt, metadata, created_at, updated_at",
+      { count: "exact" }
+    )
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  if (error) {
+    if (isMissingPersonalNoteSchemaError(error)) {
+      throw new PersonalNoteSchemaError("Personal note schema is not ready.");
+    }
+
+    throw error;
+  }
+
+  const rows = (data ?? []) as PersonalNoteRow[];
+
+  if (rows.length === 0) {
+    return {
+      latestNote: null,
+      noteCount: count ?? 0
+    };
+  }
+
+  const maps = await buildNoteContextMaps(rows);
+  const latestRow = rows[0];
+  const bookTitle = maps.books.get(latestRow.book_id) ?? "原书已不可用";
+  const chapter = maps.chapters.get(latestRow.chapter_id) ?? {
+    order: 0,
+    title: "原章节已不可用"
+  };
+  const paragraph = maps.paragraphs.get(latestRow.paragraph_id) ?? {
+    order: 0,
+    excerpt: latestRow.paragraph_excerpt
+  };
+
+  return {
+    latestNote: toPersonalNote(latestRow, {
+      bookId: latestRow.book_id,
+      bookTitle,
+      chapterId: latestRow.chapter_id,
+      chapterOrder: chapter.order,
+      chapterTitle: chapter.title,
+      paragraphId: latestRow.paragraph_id,
+      paragraphOrder: paragraph.order,
+      paragraphExcerpt: paragraph.excerpt
+    }),
+    noteCount: count ?? rows.length
+  };
+}
+
 export async function getOwnedPersonalNote(input: { userId: string; noteId: string }): Promise<PersonalNote> {
   const supabase = getSupabaseServiceRoleClient();
   const { data, error } = await supabase

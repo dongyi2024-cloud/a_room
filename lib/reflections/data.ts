@@ -362,6 +362,20 @@ export async function listAllReflectionCards(currentUserId?: string | null) {
     .filter((card): card is ReflectionCard => card !== null);
 }
 
+export async function countVisibleReflectionCards() {
+  const supabase = getSupabaseServiceRoleClient();
+  const { count, error } = await supabase
+    .from("reflection_cards")
+    .select("id", { count: "exact", head: true })
+    .neq("moderation_status", "hidden");
+
+  if (error) {
+    throw error;
+  }
+
+  return count ?? 0;
+}
+
 export async function createReflectionCard(input: CreateReflectionInput) {
   const normalizedContent = normalizeReflectionContent(input.content);
 
